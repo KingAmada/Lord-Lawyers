@@ -1,35 +1,65 @@
-body {
-    font-family: 'Poppins', sans-serif;
+/* Import font */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap');
+
+/* Reset some default styles */
+body, html {
     margin: 0;
     padding: 0;
-    background-color: #f4f4f9;
-    color: #333;
-    line-height: 1.6;
+    box-sizing: border-box;
 }
 
+/* Keyframes for animated gradient */
+@keyframes gradientAnimation {
+    0% {
+        background-position: 0% 50%;
+    }
+    50% {
+        background-position: 100% 50%;
+    }
+    100% {
+        background-position: 0% 50%;
+    }
+}
+
+/* Gradient Background */
+.gradient-background {
+    background: linear-gradient(-45deg, #6a11cb, #2575fc, #6a11cb, #fbc2eb, #f9d423, #ff9a9e);
+    background-size: 300% 300%;
+    animation: gradientAnimation 10s ease infinite;
+    height: 100%;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-family: 'Poppins', sans-serif;
+}
+
+/* Main Container */
 .container {
-    max-width: 800px;
-    margin: 30px auto;
+    max-width: 900px;
+    width: 100%;
     padding: 20px;
-    background: #fff;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    background: rgba(255, 255, 255, 0.9);
     border-radius: 10px;
-}
-
-h1 {
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
     text-align: center;
-    font-size: 28px;
-    margin-bottom: 20px;
-    color: #4CAF50;
 }
 
-textarea, input, select, button {
+/* Titles */
+h1 {
+    font-size: 2.5rem;
+    margin-bottom: 20px;
+    color: #333;
+}
+
+/* Input Fields and Labels */
+textarea, input, select {
     width: 100%;
     padding: 10px;
     margin: 10px 0;
     border: 1px solid #ccc;
     border-radius: 5px;
-    font-size: 16px;
+    font-size: 1rem;
 }
 
 textarea {
@@ -37,48 +67,70 @@ textarea {
     resize: vertical;
 }
 
-button {
-    background-color: #4CAF50;
-    color: white;
-    font-size: 16px;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-    padding: 10px;
-    text-align: center;
-    transition: background-color 0.3s ease-in-out;
+label {
+    font-size: 1rem;
+    margin-top: 10px;
+    display: block;
+    text-align: left;
 }
 
-button:hover {
-    background-color: #45a049;
+/* Settings Section */
+.settings, .jurisdiction {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 10px;
+    margin: 20px 0;
 }
 
-.status {
+.settings div, .jurisdiction label, .jurisdiction input {
+    flex: 1 1 calc(33.333% - 10px);
+    min-width: 200px;
+}
+
+/* Conversation and Audio Controls */
+.conversation, .audio-controls {
     margin-top: 20px;
-    font-weight: bold;
-    color: #666;
-    text-align: center;
-}
-
-.conversation {
-    margin-top: 20px;
-    border: 1px solid #ddd;
     padding: 15px;
-    background-color: #f9f9f9;
-    border-radius: 5px;
+    border-radius: 10px;
+    background: #f9f9f9;
+    border: 1px solid #ddd;
     max-height: 300px;
     overflow-y: auto;
 }
 
-.audio-controls {
+/* Status Updates */
+.status {
     margin-top: 20px;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    justify-content: center;
+    font-weight: bold;
+    color: #555;
+    text-align: center;
 }
 
-.audio-controls button {
-    flex: 1;
-    max-width: 150px;
+/* Gradient Button */
+.gradient-button {
+    background: linear-gradient(90deg, #6a11cb, #2575fc, #6a11cb);
+    background-size: 200% 200%;
+    animation: gradientAnimation 6s ease infinite;
+    border: none;
+    color: white;
+    padding: 15px 30px;
+    font-size: 1.2rem;
+    font-family: 'Poppins', sans-serif;
+    border-radius: 50px;
+    cursor: pointer;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    box-shadow: 0px 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+.gradient-button:hover {
+    transform: scale(1.1);
+    box-shadow: 0px 6px 20px rgba(0, 0, 0, 0.4);
+}
+
+/* Footer */
+footer {
+    margin-top: 20px;
+    font-size: 0.9rem;
+    color: #777;
 }
