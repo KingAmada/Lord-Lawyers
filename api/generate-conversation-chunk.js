@@ -1,5 +1,3 @@
-// api/generate-conversation-chunk.js
-
 const fetch = require('node-fetch');
 
 module.exports = async (req, res) => {
@@ -8,9 +6,9 @@ module.exports = async (req, res) => {
         return;
     }
 
-    const { topicText, speakers, previousLines, linesPerChunk, promoText, isFirstChunk, isLastChunk } = req.body;
+    const { topic, speakers, country, state, city, duration } = req.body;
 
-    if (!topicText || !speakers || speakers.length < 2 || !linesPerChunk) {
+    if (!topic || !speakers || speakers.length < 2 || !country) {
         res.status(400).send('Missing or invalid parameters.');
         return;
     }
@@ -18,79 +16,45 @@ module.exports = async (req, res) => {
     try {
         const openai_api_key = process.env.OPENAI_API_KEY;
 
-        // Build speaker descriptions
+        // Construct speaker descriptions
         const speakerDescriptions = speakers.map(speaker => {
-            if (speaker.personalityPrompt) {
-                return `${speaker.name}: ${speaker.personalityPrompt}`;
-            } else {
-                return `${speaker.name}: No specific personality prompt.`;
-            }
+            return `${speaker.name}, a ${speaker.level} lawyer, speaks with a voice resembling "${speaker.voice}".`;
         }).join('\n');
 
+        // Construct jurisdiction information
+        const jurisdiction = `${country}, ${state || ''}, ${city || ''}`.trim();
+        const jurisdictionMessage = jurisdiction
+            ? `Ensure the discussion is aligned with the laws and regulations in ${jurisdiction}.`
+            : '';
 
-        // Conditional instructions
-        let introInstruction = '';
-        let conclusionInstruction = '';
-        let advertisementInstruction = '';
-
-        if (isFirstChunk) {
-            introInstruction = '- Begin the podcast with an introduction where the speakers welcome the listeners and mention the topic they will be discussing.';
-            advertisementInstruction = '- At an appropriate point before the advertisement, the speakers should mention they are taking a short break.\n- The advertisement should be presented by a new speaker, "Ad Narrator", who is not part of the main discussion.\n- After the advertisement, the conversation should resume naturally.';
-        }
-
-        if (isLastChunk) {
-            conclusionInstruction = '- Conclude the podcast with the speakers providing closing remarks and thanking the listeners.';
-        }
-
-        // Build the prompt with context from previous lines
-        let prompt = `
-You are to generate an adult-themed podcast conversation between the following people:
+        // Create the prompt
+        const prompt = `
+You are to create a legal podcast conversation between the following lawyers:
 
 ${speakerDescriptions}
 
-They are discussing the following topic, using explicit raw unfiltered language appropriate for an adult audience:
+They are discussing the topic: "${topic}".
 
-"${topicText}"
+Conversation details:
+- The discussion should reflect the legal expertise and level of each lawyer.
+- Include detailed arguments, case references, and laws relevant to the jurisdiction (${jurisdiction}).
+- Make the conversation dynamic and interactive, with interruptions, questions, and varied responses.
+- Use realistic dialogue with fillers, emotional expressions, and some humor where appropriate.
+- Avoid repeating content or deviating from the legal topic.
+- Include a clear conclusion after approximately ${duration} minutes of discussion.
 
-An advertisement for the following product/service should be included at an appropriate point in the conversation:
-
-"${promoText}"
-
-Instructions:
-
-${introInstruction}
-${advertisementInstruction}
-${conclusionInstruction}
-
-- Continue the conversation naturally, building on the previous discussion.
-- Include detailed and realistic dialogue, with emotional expressions to give the speakers a more engaging podcast.
-- Include natural interactions with interruptions, overlaps, and varied speaker order.
-- Use fillers and emotional expressions to give the conversation depth.
-- Ensure that speakers interrupt each other naturally and speak in a random order, not following any fixed sequence.
-- Vary response lengths: from single words to longer replies (2-4 sentences).
-- Ensure each speaker's dialogue reflects their personality or instructions as described above.
-- Avoid repeating previous content.
-- Be approximately ${linesPerChunk} lines long.
-
-Previous conversation:
-${previousLines}
-
-Continue the conversation, ensuring coherence with the previous lines.
+${jurisdictionMessage}
 
 Format:
+- Each line starts with the speaker's name, followed by their dialogue.
+- Indicate interruptions using "--".
 
-- Start each line with the speaker's name and dialogue.
-- Use "--" for interruptions.
+Example:
+Sarah: This is my opening argument--
+John: --and let me counter that point.
 
-Provide the continuation now.
+Now generate the next part of the conversation.
         `;
-
-        const messages = [
-            {
-                role: 'system',
-                content: prompt
-            }
-        ];
 
         const response = await fetch('https://api.openai.com/v1/chat/completions', {
             method: 'POST',
@@ -99,10 +63,10 @@ Provide the continuation now.
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                model: 'gpt-4o',
-                messages: messages,
-                max_tokens: 500,
-                temperature: 1.0
+                model: 'gpt-4',
+                messages: [{ role: 'system', content: prompt }],
+                max_tokens: 1000,
+                temperature: 0.8,
             })
         });
 
