@@ -1,22 +1,47 @@
-.container {
+/* General Body Styling */
+body {
     font-family: 'Poppins', sans-serif;
-    max-width: 800px;
-    margin: auto;
-    padding: 20px;
+    margin: 0;
+    padding: 0;
+    background-color: #f4f4f9;
+    color: #333;
+    line-height: 1.6;
 }
 
+/* Container Styling */
+.container {
+    max-width: 800px;
+    margin: 30px auto;
+    padding: 20px;
+    background: #fff;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    border-radius: 10px;
+}
+
+/* Header Styling */
+h1 {
+    text-align: center;
+    font-size: 28px;
+    margin-bottom: 20px;
+    color: #4CAF50;
+}
+
+/* Form Inputs */
 textarea, input, select, button {
     width: 100%;
     padding: 10px;
     margin: 10px 0;
     border: 1px solid #ccc;
     border-radius: 5px;
+    font-size: 16px;
 }
 
 textarea {
     height: 100px;
+    resize: vertical;
 }
 
+/* Button Styling */
 button {
     background-color: #4CAF50;
     color: white;
@@ -25,30 +50,106 @@ button {
     border-radius: 5px;
     cursor: pointer;
     padding: 10px;
+    text-align: center;
+    transition: background-color 0.3s ease-in-out;
 }
 
 button:hover {
     background-color: #45a049;
 }
 
+/* Status and Feedback */
 .status {
     margin-top: 20px;
     font-weight: bold;
+    color: #666;
+    text-align: center;
 }
 
+.status.error {
+    color: #ff0000;
+}
+
+.status.success {
+    color: #4CAF50;
+}
+
+/* Conversation Display */
 .conversation {
     margin-top: 20px;
     border: 1px solid #ddd;
-    padding: 10px;
+    padding: 15px;
     background-color: #f9f9f9;
+    border-radius: 5px;
+    max-height: 300px;
+    overflow-y: auto;
 }
 
+/* Audio Controls */
 .audio-controls {
     margin-top: 20px;
     display: flex;
+    flex-wrap: wrap;
     gap: 10px;
+    justify-content: center;
 }
 
 .audio-controls button {
     flex: 1;
+    max-width: 150px;
+}
+
+/* Settings Row Layout */
+.settings-row {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    justify-content: space-between;
+}
+
+.settings-row div {
+    flex: 1;
+    min-width: 150px;
+}
+
+/* Speaker Configuration Section */
+#speaker-settings {
+    margin-top: 20px;
+}
+
+#speakers-container {
+    margin-top: 10px;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    background-color: #f4f4f9;
+}
+
+.speaker-config {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.speaker-config input, .speaker-config select {
+    flex: 1;
+}
+
+/* Disclaimer Styling */
+.disclaimer {
+    font-size: 14px;
+    text-align: center;
+    margin-top: 20px;
+    color: #777;
+}
+
+/* Responsive Design */
+@media (max-width: 600px) {
+    .settings-row {
+        flex-direction: column;
+    }
+
+    .audio-controls {
+        flex-direction: column;
+    }
 }
