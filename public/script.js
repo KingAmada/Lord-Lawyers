@@ -7,7 +7,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const speakersContainer = document.getElementById('speakers-container');
     const audioContainer = document.getElementById('audio-container');
 
-    const maxTokensPerChunk = 1000;
+    const maxTokensPerChunk = 1000; // OpenAI API token limit
     const averageWordsPerLine = 10;
     const estimatedTokensPerLine = 15;
     const linesPerChunk = Math.floor(maxTokensPerChunk / estimatedTokensPerLine);
@@ -33,6 +33,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let audioBuffers = [];
     let combinedAudioBuffer = null;
 
+    // Initialize the speaker configuration
     function initializeSpeakers() {
         const numSpeakers = parseInt(numSpeakersInput.value);
         speakersContainer.innerHTML = '';
@@ -69,6 +70,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // Event listeners for dynamic speaker setup
     numSpeakersInput.addEventListener('change', initializeSpeakers);
     initializeSpeakers();
 
@@ -79,12 +81,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const state = document.getElementById('state').value.trim();
         const city = document.getElementById('city').value.trim();
 
-        const speakers = Array.from(speakersContainer.children).map(config => {
-            const name = config.querySelector('.name-input').value.trim();
-            const level = config.querySelector('select:nth-child(2)').value;
-            const voice = config.querySelector('select:nth-child(3)').value;
-            return { name, level, voice };
-        });
+        const speakers = Array.from(speakersContainer.children).map(config => ({
+            name: config.querySelector('.name-input').value.trim(),
+            level: config.querySelector('select:nth-child(2)').value,
+            voice: config.querySelector('select:nth-child(3)').value
+        }));
 
         if (!topic || speakers.length < 2 || !country) {
             alert('Please provide a topic, at least 2 lawyers, and jurisdiction details.');
@@ -97,7 +98,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         try {
             let previousLines = '';
-            let totalWords = duration * 130; // Assume 130 words per minute
+            let totalWords = duration * 130; // Approximate words per minute
             let totalLines = Math.ceil(totalWords / averageWordsPerLine);
             let totalChunks = Math.ceil(totalLines / linesPerChunk);
 
@@ -231,7 +232,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const wav = new ArrayBuffer(44 + length * 2);
         const view = new DataView(wav);
 
-        // Write WAV header
         view.setUint32(0, 0x46464952, false); // "RIFF"
         view.setUint32(4, 36 + length * 2, true);
         view.setUint32(8, 0x45564157, false); // "WAVE"
@@ -246,7 +246,6 @@ document.addEventListener('DOMContentLoaded', () => {
         view.setUint32(36, 0x61746164, false); // "data"
         view.setUint32(40, length * 2, true);
 
-        // Write PCM data
         for (let i = 0; i < length; i++) {
             const sample = Math.max(-1, Math.min(1, buffer.getChannelData(0)[i]));
             view.setInt16(44 + i * 2, sample * (sample < 0 ? 0x8000 : 0x7FFF), true);
