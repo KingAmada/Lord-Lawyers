@@ -6,7 +6,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const numSpeakersInput = document.getElementById('num-speakers');
     const speakersContainer = document.getElementById('speakers-container');
 
-    // List of available lawyer levels and voices
     const lawyerLevels = [
         'Intern',
         'Junior Associate',
@@ -33,13 +32,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const speakerConfig = document.createElement('div');
             speakerConfig.classList.add('speaker-config');
 
-            // Input for lawyer name
             const nameInput = document.createElement('input');
             nameInput.type = 'text';
             nameInput.placeholder = `Lawyer ${i + 1} Name`;
             nameInput.classList.add('name-input');
 
-            // Dropdown for lawyer level
             const levelSelect = document.createElement('select');
             lawyerLevels.forEach(level => {
                 const option = document.createElement('option');
@@ -48,7 +45,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 levelSelect.appendChild(option);
             });
 
-            // Dropdown for voice selection
             const voiceSelect = document.createElement('select');
             availableVoices.forEach(voice => {
                 const option = document.createElement('option');
@@ -57,17 +53,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 voiceSelect.appendChild(option);
             });
 
-            // Append all elements to the speaker configuration
             speakerConfig.appendChild(nameInput);
             speakerConfig.appendChild(levelSelect);
             speakerConfig.appendChild(voiceSelect);
-
-            // Add the speaker configuration to the container
             speakersContainer.appendChild(speakerConfig);
         }
     }
 
-    // Initialize speakers when the page loads or when the number of speakers changes
     numSpeakersInput.addEventListener('change', initializeSpeakers);
     initializeSpeakers(); // Initial setup on page load
 
@@ -90,6 +82,8 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
+        console.log('Request to backend:', { topic, speakers, country, state, city, duration });
+
         progressDiv.textContent = 'Generating podcast...';
 
         try {
@@ -99,10 +93,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 body: JSON.stringify({ topic, speakers, country, state, city, duration })
             });
 
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error('API Response Error:', errorText);
+                alert('Failed to generate podcast. Check the logs for details.');
+                return;
+            }
+
             const data = await response.json();
+            console.log('Backend Response:', data);
+
             const conversation = data.conversationText;
 
-            conversationDiv.innerHTML = ''; // Clear previous conversation
+            conversationDiv.innerHTML = '';
             const lines = conversation.split('\n');
             lines.forEach(line => {
                 const lineDiv = document.createElement('div');
@@ -110,64 +113,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 conversationDiv.appendChild(lineDiv);
             });
 
-            await generateAudio(conversation, speakers);
+            alert('Podcast generated successfully.');
         } catch (error) {
-            console.error(error);
-            alert('Failed to generate podcast.');
+            console.error('Error in API call:', error);
+            alert('Failed to generate podcast due to an unexpected error.');
         }
     });
-
-    async function generateAudio(conversation, speakers) {
-        progressDiv.textContent = 'Generating audio...';
-
-        const lines = conversation.split('\n');
-        const audioBuffers = [];
-        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-
-        for (let i = 0; i < lines.length; i++) {
-            const [speaker, dialogue] = lines[i].split(':').map(s => s.trim());
-            if (!dialogue) continue;
-
-            const speakerConfig = speakers.find(s => s.name === speaker);
-            const voice = speakerConfig?.voice || 'default';
-
-            try {
-                const audioBuffer = await fetchAudio(dialogue, voice);
-                audioBuffers.push(audioBuffer);
-            } catch (err) {
-                console.error(`Error generating audio for line ${i + 1}:`, err);
-            }
-        }
-
-        progressDiv.textContent = 'Audio generated. Playing...';
-        playAudio(audioBuffers, audioContext);
-    }
-
-    async function fetchAudio(dialogue, voice) {
-        const response = await fetch('/api/generate-audio', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ dialogue, voice })
-        });
-
-        if (!response.ok) {
-            throw new Error('Failed to fetch audio.');
-        }
-
-        const arrayBuffer = await response.arrayBuffer();
-        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        return await audioContext.decodeAudioData(arrayBuffer);
-    }
-
-    function playAudio(audioBuffers, audioContext) {
-        let currentTime = audioContext.currentTime;
-
-        audioBuffers.forEach(buffer => {
-            const source = audioContext.createBufferSource();
-            source.buffer = buffer;
-            source.connect(audioContext.destination);
-            source.start(currentTime);
-            currentTime += buffer.duration;
-        });
-    }
 });
