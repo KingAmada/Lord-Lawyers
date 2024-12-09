@@ -93,7 +93,7 @@ Output format:
             body: JSON.stringify({
                 model: 'gpt-4',
                 messages: [{ role: 'system', content: prompt }],
-                max_tokens: 1000, // Limit tokens per request
+                max_tokens: 600, // Limit tokens per request
                 temperature: 0.8
             })
         });
