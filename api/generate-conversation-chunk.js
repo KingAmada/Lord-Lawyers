@@ -54,7 +54,7 @@ module.exports = async (req, res) => {
             body: JSON.stringify({
                 model: 'gpt-4',
                 messages: [{ role: 'system', content: prompt }],
-                max_tokens: 500,
+                max_tokens: 100,
                 temperature: 0.8
             })
         });
