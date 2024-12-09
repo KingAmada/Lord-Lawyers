@@ -3,19 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🎙️ Lawyer Podcast Generator</title>
+    <title>Lawyer Podcast Generator</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
 </head>
-<body>
+<body class="gradient-background">
     <div class="container">
-        <h1>🎙️ Lawyer Podcast Generator</h1>
+        <h1>⚖️ Lawyer Podcast Generator</h1>
 
         <!-- Podcast Topic Input -->
-        <textarea id="text-input" placeholder="Enter your case or topic for the podcast..."></textarea>
+        <textarea id="text-input" placeholder="Enter the topic or case details for the podcast..."></textarea>
 
         <!-- Podcast Settings -->
-        <div class="settings-row">
+        <div class="settings">
             <div>
                 <label for="podcast-duration">Desired Duration (minutes):</label>
                 <input type="number" id="podcast-duration" name="podcast-duration" min="1" max="60" value="10">
@@ -27,19 +27,15 @@
         </div>
 
         <!-- Jurisdiction Information -->
-        <div class="settings-row">
-            <div>
-                <label for="country">Country:</label>
-                <input type="text" id="country" placeholder="Enter country">
-            </div>
-            <div>
-                <label for="state">State:</label>
-                <input type="text" id="state" placeholder="Enter state">
-            </div>
-            <div>
-                <label for="city">City:</label>
-                <input type="text" id="city" placeholder="Enter city">
-            </div>
+        <div class="jurisdiction">
+            <label for="country">Country:</label>
+            <input type="text" id="country" placeholder="Enter country">
+
+            <label for="state">State:</label>
+            <input type="text" id="state" placeholder="Enter state">
+
+            <label for="city">City:</label>
+            <input type="text" id="city" placeholder="Enter city">
         </div>
 
         <!-- Lawyer Details -->
@@ -51,7 +47,7 @@
         </div>
 
         <!-- Generate Podcast Button -->
-        <button id="generate-btn">Generate Podcast</button>
+        <button id="generate-btn" class="gradient-button">Generate Podcast</button>
 
         <!-- Status and Results -->
         <div id="progress" class="status"></div>
@@ -60,9 +56,10 @@
         <!-- Audio Playback and Download -->
         <div id="audio-container" class="audio-controls"></div>
 
-        <p class="disclaimer">Note: Podcasts generated are for demonstration purposes and based on input provided.</p>
+        <footer>
+            <p>Note: Podcasts generated are for demonstration purposes only and based on the input provided.</p>
+        </footer>
     </div>
-
     <script src="script.js"></script>
 </body>
 </html>
