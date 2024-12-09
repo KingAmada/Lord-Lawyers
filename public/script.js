@@ -27,7 +27,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function initializeSpeakers() {
         const numSpeakers = parseInt(numSpeakersInput.value);
-        speakersContainer.innerHTML = '';
+        speakersContainer.innerHTML = ''; // Clear previous configurations
 
         for (let i = 0; i < numSpeakers; i++) {
             const speakerConfig = document.createElement('div');
@@ -37,6 +37,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const nameInput = document.createElement('input');
             nameInput.type = 'text';
             nameInput.placeholder = `Lawyer ${i + 1} Name`;
+            nameInput.classList.add('name-input');
 
             // Dropdown for lawyer level
             const levelSelect = document.createElement('select');
@@ -56,15 +57,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 voiceSelect.appendChild(option);
             });
 
+            // Append all elements to the speaker configuration
             speakerConfig.appendChild(nameInput);
             speakerConfig.appendChild(levelSelect);
             speakerConfig.appendChild(voiceSelect);
+
+            // Add the speaker configuration to the container
             speakersContainer.appendChild(speakerConfig);
         }
     }
 
+    // Initialize speakers when the page loads or when the number of speakers changes
     numSpeakersInput.addEventListener('change', initializeSpeakers);
-    initializeSpeakers();
+    initializeSpeakers(); // Initial setup on page load
 
     generateBtn.addEventListener('click', async () => {
         const topic = textInput.value.trim();
@@ -74,7 +79,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const city = document.getElementById('city').value.trim();
 
         const speakers = Array.from(speakersContainer.children).map(config => {
-            const name = config.querySelector('input').value.trim();
+            const name = config.querySelector('.name-input').value.trim();
             const level = config.querySelector('select:nth-child(2)').value;
             const voice = config.querySelector('select:nth-child(3)').value;
             return { name, level, voice };
@@ -97,7 +102,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = await response.json();
             const conversation = data.conversationText;
 
-            conversationDiv.innerHTML = '';
+            conversationDiv.innerHTML = ''; // Clear previous conversation
             const lines = conversation.split('\n');
             lines.forEach(line => {
                 const lineDiv = document.createElement('div');
