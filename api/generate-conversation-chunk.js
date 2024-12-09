@@ -2,16 +2,24 @@ const fetch = require('node-fetch');
 
 module.exports = async (req, res) => {
     if (req.method !== 'POST') {
-        console.error('Invalid HTTP method:', req.method);
         res.status(405).send('Method Not Allowed');
         return;
     }
 
     try {
-        const { topic, speakers, country, state, city, duration } = req.body;
+        const {
+            topic,
+            speakers,
+            country,
+            state,
+            city,
+            previousLines,
+            linesPerChunk,
+            isFirstChunk,
+            isLastChunk
+        } = req.body;
 
-        if (!topic || !speakers || speakers.length < 2 || !country) {
-            console.error('Missing or invalid parameters:', req.body);
+        if (!topic || !speakers || speakers.length < 2 || !country || !linesPerChunk) {
             res.status(400).send('Missing or invalid parameters.');
             return;
         }
@@ -24,24 +32,55 @@ module.exports = async (req, res) => {
             return;
         }
 
-        console.log('Incoming request:', { topic, speakers, country, state, city, duration });
-
+        // Construct speaker descriptions
         const speakerDescriptions = speakers
             .map(s => `${s.name}, a ${s.level} lawyer, speaks with a voice resembling "${s.voice}".`)
             .join('\n');
 
         const jurisdiction = `${country}, ${state || ''}, ${city || ''}`.trim();
+        const jurisdictionDetails = jurisdiction
+            ? `Ensure the discussion reflects the laws and regulations of ${jurisdiction}.`
+            : '';
 
-        const prompt = `
-        You are to create a legal podcast conversation between the following lawyers:
-        ${speakerDescriptions}
+        // Construct the prompt
+        let prompt = `
+You are tasked to create a podcast discussion among lawyers. Below are the details:
 
-        They are discussing the topic: "${topic}".
-        Jurisdiction: ${jurisdiction}.
-        Approximate Duration: ${duration} minutes.
+Speakers:
+${speakerDescriptions}
 
-        Please generate a detailed, interactive, and dynamic conversation among these lawyers.
-        `;
+Topic:
+"${topic}"
+
+Details:
+- The discussion should be dynamic, with realistic arguments, case references, and legal expertise.
+- Reflect the jurisdiction: ${jurisdiction}.
+- Include logical interruptions and emotional expressions.
+- Conclude with actionable advice and solutions to the legal problem.
+- Continue the discussion naturally based on the previous context provided.
+
+${jurisdictionDetails}
+
+Previous Context:
+${previousLines || ''}
+
+Instructions:
+- Generate approximately ${linesPerChunk} lines for this chunk.
+- Start with an introduction if this is the first chunk.
+- End with closing remarks if this is the final chunk.
+- Provide clear, natural, and engaging dialogue.
+
+Output format:
+- Each line starts with the speaker's name, followed by their dialogue.
+`;
+
+        if (isFirstChunk) {
+            prompt += '\n[Introduction: Start the podcast with an engaging introduction.]\n';
+        }
+
+        if (isLastChunk) {
+            prompt += '\n[Conclusion: Wrap up the podcast with closing remarks and thank the listeners.]\n';
+        }
 
         console.log('Prompt sent to OpenAI:', prompt);
 
@@ -54,7 +93,7 @@ module.exports = async (req, res) => {
             body: JSON.stringify({
                 model: 'gpt-4',
                 messages: [{ role: 'system', content: prompt }],
-                max_tokens: 800,
+                max_tokens: 1000, // Limit tokens per request
                 temperature: 0.8
             })
         });
@@ -67,11 +106,13 @@ module.exports = async (req, res) => {
         }
 
         const data = await response.json();
-        console.log('OpenAI API Response:', data);
+        const conversationText = data.choices[0].message.content.trim();
 
-        res.status(200).json({ conversationText: data.choices[0].message.content.trim() });
+        console.log('Generated Chunk:', conversationText);
+
+        res.status(200).json({ conversationText });
     } catch (error) {
-        console.error('Unexpected Server Error:', error);
+        console.error('Server Error:', error);
         res.status(500).send('Internal Server Error');
     }
 };
