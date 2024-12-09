@@ -14,7 +14,7 @@ module.exports = async (req, res) => {
     }
 
     try {
-        const openai_api_key = process.env.OPENAI_API_KEY;
+        const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
         // Construct speaker descriptions
         const speakerDescriptions = speakers.map(speaker => {
