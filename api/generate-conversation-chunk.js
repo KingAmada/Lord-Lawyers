@@ -108,7 +108,7 @@ Use "--" for interruptions.
                 model: 'gpt-4',
                 messages: messages,
                 max_tokens: 2000,
-                temperature: 1.0,
+                temperature: 0.3,
                 stream: true,
             }),
         });
