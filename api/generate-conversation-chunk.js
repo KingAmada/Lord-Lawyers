@@ -81,7 +81,8 @@ ${conclusionInstruction}
 - Vary response lengths, from single words to longer replies (2-4 sentences).
 - Reflect the personalities and lawyer levels as described.
 - Avoid repeating previous content.
-- Approximate length: ${linesPerChunk} lines.
+- You must produce exactly ${linesPerChunk} lines. Do not produce more or fewer than ${linesPerChunk} lines.
+- Once you have written ${linesPerChunk} lines, you must stop immediately.
 - Always keep in mind: The objective is to solve the client's case related to "${topicText}" in favor of the client.
 
 Previous conversation:
