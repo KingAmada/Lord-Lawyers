@@ -137,13 +137,12 @@ document.addEventListener('DOMContentLoaded', () => {
             speakers.push({ name, voice, role });
         });
 
-        // Calculate lines needed based on desiredDuration
-        const averageWordsPerMinute = 130; // Estimated words per minute
-        const averageWordsPerLine = 10;   // Estimated words per line
+        // Calculate lines needed
+        const averageWordsPerMinute = 130;
+        const averageWordsPerLine = 10;
         const totalWordsNeeded = desiredDuration * averageWordsPerMinute;
         const totalLinesNeeded = Math.ceil(totalWordsNeeded / averageWordsPerLine);
 
-        // Request that number of lines from the server
         const linesPerChunk = totalLinesNeeded; // single request
         const fullConversationText = await streamConversation(text, speakers, "", linesPerChunk, countryText, stateText, cityText, true, true);
 
