@@ -1,5 +1,3 @@
-/* public/styles.css */
-
 /* Reset and Base Styles */
 * {
     margin: 0;
@@ -23,35 +21,6 @@ body {
     max-width: 800px;
     margin: 40px auto;
     padding: 20px;
-}
-
-/* Style the disclaimer */
-.disclaimer {
-    color: #a00;
-    padding: 15px;
-    margin: 20px 0;
-    border: 1px solid #a00;
-    border-radius: 5px;
-    text-align: center;
-    font-weight: bold;
-}
-
-/* Animations */
-@keyframes gradientAnimation {
-    0% {
-        background-position: 0% 50%;
-    }
-    50% {
-        background-position: 100% 50%;
-    }
-    100% {
-        background-position: 0% 50%;
-    }
-}
-
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(20px); }
-    to   { opacity: 1; transform: translateY(0); }
 }
 
 /* Title */
@@ -120,7 +89,7 @@ button:disabled {
     cursor: not-allowed;
 }
 
-/* Settings row */
+/* Settings Row */
 .settings-row {
     display: flex;
     flex-wrap: wrap;
@@ -162,24 +131,6 @@ button:disabled {
     animation: fadeIn 0.5s ease-in-out;
 }
 
-.speaker-config::before {
-    content: '';
-    position: absolute;
-    left: -5px;
-    top: -5px;
-    right: -5px;
-    bottom: -5px;
-    z-index: -1;
-    background: linear-gradient(135deg, #667eea, #764ba2);
-    border-radius: 10px;
-    opacity: 0;
-    transition: opacity 0.3s;
-}
-
-.speaker-config:hover::before {
-    opacity: 1;
-}
-
 .speaker-config input[type="text"],
 .speaker-config select {
     flex: 1 1 30%;
@@ -198,19 +149,6 @@ button:disabled {
     background-position: right 10px center;
     background-size: 10px;
     padding-right: 40px;
-}
-
-/* Responsive Design */
-@media (max-width: 768px) {
-    .settings-row > div {
-        flex: 1 1 100%;
-    }
-
-    .speaker-config input[type="text"],
-    .speaker-config select {
-        flex: 1 1 100%;
-        margin-right: 0;
-    }
 }
 
 /* Conversation Display Area */
@@ -275,29 +213,19 @@ button:disabled {
     animation: bounce 2s infinite ease-in-out;
 }
 
-@keyframes bounce {
-    0%, 100% {
-        transform: scale(0);
-    } 
+@keyframes gradientAnimation {
+    0% {
+        background-position: 0% 50%;
+    }
     50% {
-        transform: scale(1);
+        background-position: 100% 50%;
+    }
+    100% {
+        background-position: 0% 50%;
     }
 }
 
-/* Scrollbar Styling */
-::-webkit-scrollbar {
-    width: 8px;
-}
-
-::-webkit-scrollbar-track {
-    background: rgba(255, 255, 255, 0.1);
-}
-
-::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.3);
-    border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-    background: rgba(255, 255, 255, 0.5);
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: translateY(0); }
 }
