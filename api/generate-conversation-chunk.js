@@ -8,9 +8,9 @@ module.exports = async (req, res) => {
         return;
     }
 
-    const { topicText, speakers, previousLines, linesPerChunk, promoText, isFirstChunk, isLastChunk } = req.body;
+    const { topicText, speakers, previousLines, linesPerChunk, countryText, stateText, cityText, isFirstChunk, isLastChunk } = req.body;
 
-    if (!topicText || !speakers || speakers.length < 2 || !linesPerChunk) {
+    if (!topicText || !speakers || speakers.length < 2 || !linesPerChunk || !countryText || !stateText || !cityText) {
         res.status(400).send('Missing or invalid parameters.');
         return;
     }
@@ -18,31 +18,23 @@ module.exports = async (req, res) => {
     try {
         const openai_api_key = process.env.OPENAI_API_KEY;
 
-        // Build speaker descriptions
+        // Build speaker descriptions with their roles
         const speakerDescriptions = speakers.map(speaker => {
-            if (speaker.personalityPrompt) {
-                return `${speaker.name}: ${speaker.personalityPrompt}`;
-            } else {
-                return `${speaker.name}: No specific personality prompt.`;
-            }
+            return `${speaker.name}: A ${speaker.role} in the legal profession.`;
         }).join('\n');
 
-
-        // Conditional instructions
         let introInstruction = '';
         let conclusionInstruction = '';
-        let advertisementInstruction = '';
 
         if (isFirstChunk) {
-            introInstruction = '- Begin the podcast with an introduction where the speakers welcome the listeners and mention the topic they will be discussing.';
-            advertisementInstruction = '- At an appropriate point before the advertisement, the speakers should mention they are taking a short break.\n- The advertisement should be presented by a new speaker, "Ad Narrator", who is not part of the main discussion.\n- After the advertisement, the conversation should resume naturally.';
+            introInstruction = '- Begin the podcast with an introduction where the speakers welcome the listeners and mention the topic and the city they are focusing on.';
         }
 
         if (isLastChunk) {
             conclusionInstruction = '- Conclude the podcast with the speakers providing closing remarks and thanking the listeners.';
         }
 
-        // Build the prompt with context from previous lines
+        // Build the prompt
         let prompt = `
 You are to generate an adult-themed podcast conversation between the following people:
 
@@ -52,14 +44,11 @@ They are discussing the following topic, using explicit raw unfiltered language 
 
 "${topicText}"
 
-An advertisement for the following product/service should be included at an appropriate point in the conversation:
-
-"${promoText}"
+The conversation should be focused around the city of "${cityText}", located in ${stateText}, ${countryText}.
 
 Instructions:
 
 ${introInstruction}
-${advertisementInstruction}
 ${conclusionInstruction}
 
 - Continue the conversation naturally, building on the previous discussion.
@@ -68,7 +57,7 @@ ${conclusionInstruction}
 - Use fillers and emotional expressions to give the conversation depth.
 - Ensure that speakers interrupt each other naturally and speak in a random order, not following any fixed sequence.
 - Vary response lengths: from single words to longer replies (2-4 sentences).
-- Ensure each speaker's dialogue reflects their personality or instructions as described above.
+- Ensure each speaker's dialogue reflects their given role.
 - Avoid repeating previous content.
 - Be approximately ${linesPerChunk} lines long.
 
