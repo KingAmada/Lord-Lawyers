@@ -46,7 +46,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // Speaker Name Input
             const nameInput = document.createElement('input');
             nameInput.type = 'text';
-            nameInput.value = `Speaker${i + 1}`;
+            nameInput.value = `Lawyer${i + 1}`;
             nameInput.placeholder = `Name`;
 
             // Voice Selection Dropdown
@@ -72,7 +72,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 roleSelect.appendChild(option);
             });
 
-            // Append elements to speakerConfig
             speakerConfig.appendChild(nameInput);
             speakerConfig.appendChild(voiceSelect);
             speakerConfig.appendChild(roleSelect);
@@ -103,7 +102,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const cityText = cityInput.value.trim();
 
         if (text === '') {
-            alert('Please enter a topic for the podcast.');
+            alert('Please enter details about the case.');
             return;
         }
 
@@ -123,20 +122,20 @@ document.addEventListener('DOMContentLoaded', () => {
         // Show loading animation
         showLoading();
 
-        startPodcastGeneration(text, desiredDuration, countryText, stateText, cityText)
+        startDiscussionGeneration(text, desiredDuration, countryText, stateText, cityText)
             .catch(error => {
                 console.error(error);
-                alert('An error occurred while generating the podcast.');
+                alert('An error occurred while generating the discussion.');
             })
             .finally(() => {
-                generateBtn.textContent = 'Generate Podcast';
+                generateBtn.textContent = 'Generate Discussion';
                 generateBtn.disabled = false;
                 // Hide loading animation
                 hideLoading();
             });
     });
 
-    async function startPodcastGeneration(text, desiredDuration, countryText, stateText, cityText) {
+    async function startDiscussionGeneration(text, desiredDuration, countryText, stateText, cityText) {
         progressDiv.textContent = 'Generating conversation...';
         conversationDiv.innerHTML = '';
         let audioBuffers = [];
@@ -176,7 +175,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const isFirstChunk = chunkIndex === 0;
             const isLastChunk = chunkIndex === totalChunks - 1;
 
-            progressDiv.textContent = `Generating podcast ${chunkIndex + 1} of ${totalChunks}...`;
+            progressDiv.textContent = `Generating discussion ${chunkIndex + 1} of ${totalChunks}...`;
 
             const conversationText = await generateConversationChunk(
                 text,
@@ -216,7 +215,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Step 4: Create and display the play button
         const playButton = document.createElement('button');
-        playButton.textContent = 'Play Podcast';
+        playButton.textContent = 'Play Discussion';
         playButton.classList.add('play-button');
         playButton.onclick = () => {
             playButton.disabled = true;
@@ -377,7 +376,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             sources.push(source);
 
-            // Update currentTime based on whether this line is an interruption
+            // Update currentTime
             if (line.isInterruption) {
                 currentTime += buffer.duration - overlapDuration;
             } else {
@@ -387,30 +386,25 @@ document.addEventListener('DOMContentLoaded', () => {
             adjustedBuffers.push(buffer);
         }
 
-        progressDiv.textContent = 'Playing podcast...';
+        progressDiv.textContent = 'Playing discussion...';
 
         const combinedBuffer = combineAudioBuffers(adjustedBuffers, audioContext, conversation);
-
-        // Convert combined buffer to WAV
         const wavData = audioBufferToWav(combinedBuffer);
-
-        // Create a Blob from the WAV data
         const audioBlob = new Blob([new DataView(wavData)], { type: 'audio/wav' });
 
-        // Create a download link
         createDownloadLink(audioBlob);
 
         const lastSource = sources[sources.length - 1];
         if (lastSource) {
             lastSource.onended = () => {
-                progressDiv.textContent = 'Podcast playback finished!';
+                progressDiv.textContent = 'Discussion playback finished!';
             };
         } else {
             alert('No audio sources to play.');
         }
     }
 
-    function combineAudioBuffers(audioBuffers, audioContext, conversation) {
+    function combineAudioBuffers(audioBuffers, audioContext) {
         const numberOfChannels = audioBuffers[0].numberOfChannels;
         let totalLength = 0;
 
@@ -492,9 +486,9 @@ document.addEventListener('DOMContentLoaded', () => {
         view.setUint16(22, numChannels, true);
         /* sample rate */
         view.setUint32(24, sampleRate, true);
-        /* byte rate (sample rate * block align) */
+        /* byte rate */
         view.setUint32(28, sampleRate * numChannels * (bitDepth / 8), true);
-        /* block align (channel count * bytes per sample) */
+        /* block align */
         view.setUint16(32, numChannels * (bitDepth / 8), true);
         /* bits per sample */
         view.setUint16(34, bitDepth, true);
@@ -503,7 +497,7 @@ document.addEventListener('DOMContentLoaded', () => {
         /* data chunk length */
         view.setUint32(40, samples.length * (bitDepth / 8), true);
 
-        if (format === 1) { // PCM
+        if (format === 1) {
             floatTo16BitPCM(view, 44, samples);
         } else {
             writeFloat32(view, 44, samples);
@@ -535,8 +529,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const url = URL.createObjectURL(audioBlob);
         const downloadLink = document.createElement('a');
         downloadLink.href = url;
-        downloadLink.download = 'podcast.wav';
-        downloadLink.textContent = 'Download Podcast';
+        downloadLink.download = 'discussion.wav';
+        downloadLink.textContent = 'Download Discussion';
         downloadLink.style.display = 'block';
         downloadLink.style.marginTop = '10px';
         downloadLink.style.color = '#fff';
