@@ -1,5 +1,3 @@
-// api/generate-conversation-chunk.js
-
 const fetch = require('node-fetch');
 
 module.exports = async (req, res) => {
@@ -16,7 +14,7 @@ module.exports = async (req, res) => {
     }
 
     try {
-        const openai_api_key = process.env.OPENAI_API_KEY;
+        const openaiApiKey = process.env.OPENAI_API_KEY;
 
         // Build speaker descriptions with their roles
         const speakerDescriptions = speakers.map(speaker => {
@@ -34,8 +32,8 @@ module.exports = async (req, res) => {
             conclusionInstruction = `- Conclude by having the lawyers summarize the solution and strategy for winning the case related to "${topicText}" for the client.`;
         }
 
-        // Incorporate the topicText into the conversation prompt
-        let prompt = `
+        // Generate the conversation prompt
+        const prompt = `
 You are generating a law-firm-style discussion (not a podcast) where multiple lawyers of varying levels of expertise are actively working together to solve a client's case in their favor. They are physically in a law firm meeting room, discussing strategy, citing laws and legal precedents relevant to the case on the topic: "${topicText}".
 
 The scenario takes place in ${cityText}, ${stateText}, ${countryText}.
@@ -93,42 +91,52 @@ Continue the conversation now. Format each line as:
 SpeakerName (Lawyer Level): Dialogue
 
 Use "--" for interruptions.
-`;
+        `;
 
-        const messages = [
-            {
-                role: 'system',
-                content: prompt
-            }
-        ];
+        const messages = [{ role: 'system', content: prompt }];
 
-        const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        // OpenAI API streaming request
+        const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
             method: 'POST',
             headers: {
-                'Authorization': `Bearer ${openai_api_key}`,
-                'Content-Type': 'application/json'
+                'Authorization': `Bearer ${openaiApiKey}`,
+                'Content-Type': 'application/json',
             },
             body: JSON.stringify({
                 model: 'gpt-4',
                 messages: messages,
-                max_tokens: 800,
-                temperature: 1.0
-            })
+                temperature: 1.0,
+                stream: true,
+            }),
         });
 
-        if (!response.ok) {
-            const error = await response.json();
-            console.error('OpenAI API Error:', error);
-            res.status(500).send(`Error generating conversation chunk: ${error.error.message}`);
-            return;
+        // Send headers for SSE
+        res.setHeader('Content-Type', 'text/event-stream');
+        res.setHeader('Cache-Control', 'no-cache');
+        res.setHeader('Connection', 'keep-alive');
+
+        // Stream response to client
+        for await (const chunk of openaiResponse.body) {
+            const payload = chunk.toString().trim();
+
+            if (payload === '') continue;
+
+            try {
+                const data = JSON.parse(payload);
+                const content = data.choices[0]?.delta?.content;
+
+                if (content) {
+                    res.write(`data: ${JSON.stringify({ content })}\n\n`);
+                }
+            } catch (error) {
+                console.error('Error parsing chunk:', payload, error);
+            }
         }
 
-        const data = await response.json();
-        const conversationText = data.choices[0].message.content.trim();
-
-        res.status(200).json({ conversationText });
+        res.write('data: [DONE]\n\n');
+        res.end();
     } catch (error) {
         console.error('Server Error:', error);
-        res.status(500).send('Server error.');
+        res.status(500).send('Internal Server Error');
     }
 };
