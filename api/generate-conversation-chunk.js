@@ -19,7 +19,6 @@ module.exports = async (req, res) => {
         const openai_api_key = process.env.OPENAI_API_KEY;
 
         // Build speaker descriptions with their roles
-        // The conversation is a law firm scenario discussing a case
         const speakerDescriptions = speakers.map(speaker => {
             return `${speaker.name}: A ${speaker.role} in the legal profession, working in a law firm setting, tasked with solving a case in favor of their client.`;
         }).join('\n');
@@ -28,22 +27,16 @@ module.exports = async (req, res) => {
         let conclusionInstruction = '';
 
         if (isFirstChunk) {
-            introInstruction = '- Begin the discussion by introducing the scenario: multiple lawyers in a law firm are gathering to solve the client’s case. Mention the city, state, and country context.';
+            introInstruction = `- Begin the discussion by introducing the scenario: multiple lawyers in a law firm are gathering to solve the client’s case related to "${topicText}". Mention that this case is taking place in ${cityText}, ${stateText}, ${countryText}, and that the goal is to find a winning legal strategy.`;
         }
 
         if (isLastChunk) {
-            conclusionInstruction = '- Conclude by having the lawyers summarize the solution and strategy for winning the case for the client.';
+            conclusionInstruction = `- Conclude by having the lawyers summarize the solution and strategy for winning the case related to "${topicText}" for the client.`;
         }
 
-        // Additional persona and style instructions
-        // Each lawyer should speak as if they are an emergency lawyer with a clever, slightly crooked demeanor.
-        // They must respond with bold confidence, citing relevant laws, rules, and regulations favoring the client.
-        // They must always aim to convince using the law, leveraging constitution, user rights, federal, state, and local laws.
-        // Tone varies (angry, sad, happy), be brief, punchy, no uncertainty or lack of knowledge.
-        // The discussion involves real-life style interruptions, references to legal texts, and attempts to solve the case.
-
+        // Incorporate the topicText into the conversation prompt
         let prompt = `
-You are generating a law-firm-style discussion (not a podcast) where multiple lawyers of varying levels of expertise are actively working together to solve a client's case in their favor. They are physically in a law firm meeting room, discussing strategy, citing laws and legal precedents. They may interrupt each other and provide legal references. The ultimate goal is to find the best legal strategy for winning the case for their client.
+You are generating a law-firm-style discussion (not a podcast) where multiple lawyers of varying levels of expertise are actively working together to solve a client's case in their favor. They are physically in a law firm meeting room, discussing strategy, citing laws and legal precedents relevant to the case on the topic: "${topicText}".
 
 The scenario takes place in ${cityText}, ${stateText}, ${countryText}.
 
@@ -58,7 +51,7 @@ They have the following style and persona guidelines:
 - Their tone can vary (angry, sad, happy, etc.) but they are always brief, punchy, and convincing.
 - They do not express uncertainty or lack of knowledge.
 - They refer to legal codes, acts, and precedents whenever possible.
-- They are working together (with some interruptions and disagreements) to craft the best possible legal defense and strategy.
+- They are working together (with some interruptions and disagreements) to craft the best possible legal defense and strategy concerning the "${topicText}" case.
 
 Instructions:
 
@@ -72,7 +65,7 @@ ${conclusionInstruction}
 - Reflect the personalities as described (confidence, cleverness, etc.).
 - Avoid repeating previous content.
 - Approximate length: ${linesPerChunk} lines.
-- Always keep in mind: The objective is to solve the client's case in favor of the client.
+- Always keep in mind: The objective is to solve the client's case related to "${topicText}" in favor of the client.
 
 Previous conversation:
 ${previousLines}
@@ -98,7 +91,7 @@ Use "--" for interruptions.
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                model: 'gpt-4o',
+                model: 'gpt-4',
                 messages: messages,
                 max_tokens: 500,
                 temperature: 1.0
