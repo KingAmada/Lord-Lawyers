@@ -96,7 +96,7 @@ Continue now.
             body: JSON.stringify({
                 model: 'gpt-4o',
                 messages: [{ role: 'system', content: prompt }],
-                max_tokens: 2000,
+                max_tokens: 5000,
                 temperature: 1.0,
                 stream: true,
             }),
