@@ -9,6 +9,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const maxSpeakers = 6;
 
+    // List of available voices
     const availableVoices = [
         { name: 'Jenny (Female)', value: 'nova' },
         { name: 'Tina (Female)', value: 'shimmer' },
@@ -18,6 +19,7 @@ document.addEventListener('DOMContentLoaded', () => {
         { name: 'Adam (Male)', value: 'alloy' }
     ];
 
+    // Lawyer levels for dropdown
     const lawyerLevels = [
         'Intern',
         'Junior Associate',
@@ -28,6 +30,7 @@ document.addEventListener('DOMContentLoaded', () => {
         'Legal Scholar'
     ];
 
+    // Initialize speaker configurations
     function initializeSpeakers() {
         const numSpeakers = parseInt(numSpeakersInput.value);
         speakersContainer.innerHTML = '';
@@ -36,11 +39,13 @@ document.addEventListener('DOMContentLoaded', () => {
             const speakerConfig = document.createElement('div');
             speakerConfig.classList.add('speaker-config');
 
+            // Speaker Name Input
             const nameInput = document.createElement('input');
             nameInput.type = 'text';
             nameInput.value = `Speaker${i + 1}`;
-            nameInput.placeholder = 'Name';
+            nameInput.placeholder = `Name`;
 
+            // Voice Selection Dropdown
             const voiceSelect = document.createElement('select');
             availableVoices.forEach(voice => {
                 const option = document.createElement('option');
@@ -48,9 +53,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 option.textContent = voice.name;
                 voiceSelect.appendChild(option);
             });
-            const voiceIndex = i % availableVoices.length;
-            voiceSelect.selectedIndex = voiceIndex;
+            voiceSelect.selectedIndex = i % availableVoices.length;
 
+            // Lawyer Level Dropdown
             const levelSelect = document.createElement('select');
             lawyerLevels.forEach(level => {
                 const option = document.createElement('option');
@@ -59,6 +64,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 levelSelect.appendChild(option);
             });
 
+            // Append elements to speakerConfig
             speakerConfig.appendChild(nameInput);
             speakerConfig.appendChild(voiceSelect);
             speakerConfig.appendChild(levelSelect);
@@ -66,6 +72,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // Event listener for number of speakers change
     numSpeakersInput.addEventListener('change', initializeSpeakers);
     initializeSpeakers();
 
