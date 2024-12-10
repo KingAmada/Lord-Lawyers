@@ -126,11 +126,11 @@ button:disabled {
     flex-wrap: wrap;
     justify-content: space-between;
     margin: 20px 0;
-    gap: 20px; /* Adds space between the duration and number of speakers */
+    gap: 20px;
 }
 
 .settings-row > div {
-    flex: 1 1 calc(50% - 10px); /* Adjusted width to account for the gap */
+    flex: 1 1 calc(50% - 10px);
     margin-bottom: 10px;
 }
 
@@ -141,12 +141,12 @@ button:disabled {
     color: #fff;
 }
 
-#podcast-settings {
-    text-align: left;
-}
-
-#podcast-settings input[type="number"] {
-    width: 100%;
+/* Location Section */
+.location-section label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+    color: #fff;
 }
 
 /* Speaker Configurations */
@@ -181,24 +181,12 @@ button:disabled {
 }
 
 .speaker-config input[type="text"],
-.speaker-config select,
-.speaker-config .personality-input {
+.speaker-config select {
     flex: 1 1 30%;
     margin-right: 10px;
     margin-bottom: 10px;
     min-width: 200px;
     height: 50px;
-}
-
-.speaker-config input[type="text"]:last-child,
-.speaker-config select:last-child,
-.speaker-config .personality-input:last-child {
-    margin-right: 0;
-}
-
-.speaker-config input[type="text"]::placeholder,
-.speaker-config .personality-input::placeholder {
-    color: #eee;
 }
 
 .speaker-config select {
@@ -212,30 +200,6 @@ button:disabled {
     padding-right: 40px;
 }
 
-/* Promotion Section */
-.promo-section {
-    margin-top: 20px;
-    text-align: left;
-}
-
-.promo-section label {
-    display: block;
-    margin-bottom: 5px;
-    font-weight: bold;
-    color: #fff;
-}
-
-.promo-section input[type="text"] {
-    width: 100%;
-    border: none;
-    border-radius: 8px;
-    padding: 15px;
-    font-size: 1em;
-    background: rgba(255, 255, 255, 0.2);
-    color: #fff;
-    margin-bottom: 10px;
-}
-
 /* Responsive Design */
 @media (max-width: 768px) {
     .settings-row > div {
@@ -243,8 +207,7 @@ button:disabled {
     }
 
     .speaker-config input[type="text"],
-    .speaker-config select,
-    .speaker-config .personality-input {
+    .speaker-config select {
         flex: 1 1 100%;
         margin-right: 0;
     }
