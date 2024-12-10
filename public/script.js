@@ -98,28 +98,28 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         });
 
-        console.log('Speakers:', speakers); // For debugging
-
         generateBtn.textContent = 'Generating...';
         generateBtn.disabled = true;
 
         showLoading();
 
-        startPodcastGeneration(text, desiredDuration, promoText, speakers)
-            .catch(error => {
-                console.error(error);
-                alert('An error occurred while generating the podcast.');
-            })
-            .finally(() => {
-                generateBtn.textContent = 'Generate Podcast';
-                generateBtn.disabled = false;
-                hideLoading();
-            });
+        try {
+            await startPodcastGeneration(text, desiredDuration, promoText, speakers);
+        } catch (error) {
+            console.error(error);
+            alert('An error occurred while generating the podcast.');
+        } finally {
+            generateBtn.textContent = 'Generate Podcast';
+            generateBtn.disabled = false;
+            hideLoading();
+        }
     });
 
     async function startPodcastGeneration(text, desiredDuration, promoText, speakers) {
         progressDiv.textContent = 'Generating conversation...';
         conversationDiv.innerHTML = '';
+        let audioBuffers = [];
+        let conversation = [];
 
         const totalWordsNeeded = desiredDuration * 130; // Words per minute
         const totalLinesNeeded = Math.ceil(totalWordsNeeded / 10); // Words per line
@@ -132,7 +132,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const isFirstChunk = chunkIndex === 0;
             const isLastChunk = chunkIndex === totalChunks - 1;
 
-            progressDiv.textContent = `Generating podcast ${chunkIndex + 1} of ${totalChunks}...`;
+            progressDiv.textContent = `Generating podcast chunk ${chunkIndex + 1} of ${totalChunks}...`;
 
             const conversationText = await generateConversationChunk(
                 text, speakers, previousLines, linesPerChunk, promoText, isFirstChunk, isLastChunk
@@ -145,6 +145,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 .map(line => `${line.speaker}: ${line.dialogue}`)
                 .join('\n');
 
+            conversation = conversation.concat(chunkConversation);
+
             chunkConversation.forEach(line => {
                 const lineDiv = document.createElement('div');
                 lineDiv.textContent = `${line.speaker}: ${line.dialogue}`;
@@ -152,7 +154,14 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
 
-        progressDiv.textContent = 'Podcast generation complete!';
+        audioBuffers = await generateAudioForConversation(conversation, speakers);
+
+        progressDiv.textContent = 'Podcast generation complete. Preparing audio playback...';
+
+        const playButton = document.createElement('button');
+        playButton.textContent = 'Play Podcast';
+        playButton.onclick = () => playGeneratedAudio(audioBuffers);
+        conversationDiv.appendChild(playButton);
     }
 
     async function generateConversationChunk(topicText, speakers, previousLines, linesPerChunk, promoText, isFirstChunk, isLastChunk) {
@@ -169,6 +178,46 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const data = await response.json();
         return data.conversationText;
+    }
+
+    async function generateAudioForConversation(conversation, speakers) {
+        const audioBuffers = [];
+        for (const line of conversation) {
+            const speakerVoice = speakers.find(s => s.name === line.speaker)?.voice;
+            if (!speakerVoice) continue;
+            const audioBuffer = await generateAudioBuffer(line.speaker, line.dialogue, speakerVoice);
+            audioBuffers.push(audioBuffer);
+        }
+        return audioBuffers;
+    }
+
+    async function generateAudioBuffer(speaker, dialogue, voice) {
+        const response = await fetch('/api/generate-audio', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ speaker, dialogue, voice })
+        });
+
+        if (!response.ok) {
+            throw new Error('Error generating audio buffer');
+        }
+
+        const arrayBuffer = await response.arrayBuffer();
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        return await audioContext.decodeAudioData(arrayBuffer);
+    }
+
+    function playGeneratedAudio(audioBuffers) {
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        let startTime = audioContext.currentTime;
+
+        audioBuffers.forEach(buffer => {
+            const source = audioContext.createBufferSource();
+            source.buffer = buffer;
+            source.connect(audioContext.destination);
+            source.start(startTime);
+            startTime += buffer.duration;
+        });
     }
 
     function parseConversation(conversationText) {
