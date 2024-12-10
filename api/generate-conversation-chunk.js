@@ -14,12 +14,10 @@ module.exports = async (req, res) => {
             state,
             city,
             previousLines,
-            linesPerChunk,
-            isFirstChunk,
-            isLastChunk
+            numReplies
         } = req.body;
 
-        if (!topic || !speakers || speakers.length < 2 || !country || !linesPerChunk) {
+        if (!topic || !speakers || speakers.length < 2 || !numReplies) {
             res.status(400).send('Missing or invalid parameters.');
             return;
         }
@@ -32,7 +30,6 @@ module.exports = async (req, res) => {
             return;
         }
 
-        // Construct speaker descriptions
         const speakerDescriptions = speakers
             .map(s => `${s.name}, a ${s.level} lawyer, speaks with a voice resembling "${s.voice}".`)
             .join('\n');
@@ -42,47 +39,29 @@ module.exports = async (req, res) => {
             ? `Ensure the discussion reflects the laws and regulations of ${jurisdiction}.`
             : '';
 
-        // Build the prompt dynamically
         let prompt = `
-You are tasked to create a legal podcast discussion between lawyers.
+        You are tasked to create a podcast discussion among lawyers. Below are the details:
 
-Speakers:
-${speakerDescriptions}
+        Speakers:
+        ${speakerDescriptions}
 
-Topic:
-"${topic}"
+        Topic:
+        "${topic}"
 
-Details:
-- The conversation should be dynamic, engaging, and legally detailed.
-- Reflect the jurisdiction: ${jurisdiction}.
-- Include legal arguments, case references, and emotional expressions.
-- Conclude with actionable advice and solutions.
-- Incorporate interruptions and natural speaker interactions for realism.
+        Previous Context:
+        ${previousLines || ''}
 
-${jurisdictionDetails}
+        Instructions:
+        - Generate ${numReplies} replies as part of the ongoing discussion.
+        - The discussion should be dynamic, with realistic arguments, case references, and legal expertise.
+        - Reflect the jurisdiction: ${jurisdiction}.
+        - Include interruptions and varied response lengths.
+        - Ensure coherence with the context provided.
 
-Previous Context:
-${previousLines || 'No prior context provided.'}
+        Output format:
+        - Each line starts with the speaker's name, followed by their dialogue.
+        `;
 
-Instructions:
-- Generate approximately ${linesPerChunk} lines for this chunk.
-- If this is the first chunk, include an engaging introduction.
-- If this is the last chunk, include a conclusive closing.
-- Format each line as "Speaker Name: Dialogue".
-- Use "--" for interruptions or continued sentences.
-`;
-
-        if (isFirstChunk) {
-            prompt += '\n[Introduction: Open the podcast with an engaging introduction and topic overview.]\n';
-        }
-
-        if (isLastChunk) {
-            prompt += '\n[Conclusion: Close the podcast with summary remarks and appreciation for listeners.]\n';
-        }
-
-        console.log('Generated Prompt for OpenAI API:', prompt);
-
-        // Send the prompt to OpenAI
         const response = await fetch('https://api.openai.com/v1/chat/completions', {
             method: 'POST',
             headers: {
@@ -92,7 +71,7 @@ Instructions:
             body: JSON.stringify({
                 model: 'gpt-4',
                 messages: [{ role: 'system', content: prompt }],
-                max_tokens: 400, // Ensure manageable chunks to avoid timeout
+                max_tokens: 300, // Limit tokens for small chunks
                 temperature: 0.8
             })
         });
@@ -107,7 +86,7 @@ Instructions:
         const data = await response.json();
         const conversationText = data.choices[0].message.content.trim();
 
-        console.log('Generated Conversation Chunk:', conversationText);
+        console.log('Generated Replies:', conversationText);
 
         res.status(200).json({ conversationText });
     } catch (error) {
