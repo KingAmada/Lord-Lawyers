@@ -60,15 +60,15 @@ They have the following style and persona guidelines:
   - Their tone varies (angry, sarcastic, excited, etc.) but always remains direct, decisive, and authoritative.
 
 - Each participant's response reflects their **lawyer level**, which impacts their knowledge, confidence, and approach:
-  - **Interns**: Offer basic ideas, often echoing others' arguments but lacking depth or confidence. They sometimes ask questions to clarify or propose overly simplistic solutions.
+  - **Interns**: Offer basic ideas, often echoing others' arguments but lacking depth or confidence.
   - **Junior Associates**: Have moderate knowledge and contribute with enthusiasm, often citing basic laws or common arguments but lacking strategic depth.
   - **Associates**: Provide solid arguments and useful insights, citing relevant laws but occasionally deferring to higher-ranking lawyers for critical decisions.
   - **Lawyers**: Confidently cite legal codes, precedents, and tactics, presenting convincing arguments with logical depth.
-  - **Senior Advocates (SANs)**: Dominate the discussion with advanced strategies, citing obscure precedents, and leveraging loopholes with ease. They guide the group toward actionable solutions.
-  - **Judges**: Offer a balanced perspective, emphasizing precedents, case interpretations, and procedural expertise. Their tone is authoritative and final.
-  - **Legal Scholars**: Dive into historical and theoretical aspects of the law, citing detailed legal interpretations and providing intellectual depth to the discussion.
+  - **Senior Advocates (SANs)**: Dominate the discussion with advanced strategies, citing obscure precedents and leveraging loopholes with ease.
+  - **Judges**: Offer a balanced perspective, emphasizing precedents, case interpretations, and procedural expertise.
+  - **Legal Scholars**: Dive into historical and theoretical aspects of the law, providing intellectual depth.
 
-- They must always provide a clear, actionable solution to the case at the end of the discussion, crafted by the participants through their combined expertise and bold strategies.
+- The conversation must conclude with a definitive legal strategy for solving the client's case.
 
 Instructions:
 
@@ -79,10 +79,9 @@ ${conclusionInstruction}
 - Include realistic dialogue with emotional expressions, interruptions, and varied speaker order.
 - Use fillers and emotional expressions for depth.
 - Vary response lengths, from single words to longer replies (2-4 sentences).
-- Reflect the personalities and lawyer levels as described (unfiltered, bold, and varying expertise).
+- Reflect the personalities and lawyer levels as described.
 - Avoid repeating previous content.
 - Approximate length: ${linesPerChunk} lines.
-- **The discussion must conclude with a definitive legal strategy or solution to the case, crafted by the participants through their bold and confident collaboration.**
 - Always keep in mind: The objective is to solve the client's case related to "${topicText}" in favor of the client.
 
 Previous conversation:
@@ -97,7 +96,7 @@ Use "--" for interruptions.
 
         const messages = [{ role: 'system', content: prompt }];
 
-        // Make the request to OpenAI with streaming enabled
+        // Request to OpenAI with streaming
         const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
             method: 'POST',
             headers: {
@@ -159,7 +158,7 @@ Use "--" for interruptions.
                 }
             }
 
-            // If done without [DONE], just end
+            // If ended without [DONE], just end
             res.write('data: [DONE]\n\n');
             res.end();
         } catch (err) {
