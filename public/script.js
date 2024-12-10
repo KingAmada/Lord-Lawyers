@@ -143,7 +143,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const totalWordsNeeded = desiredDuration * averageWordsPerMinute;
         const totalLinesNeeded = Math.ceil(totalWordsNeeded / averageWordsPerLine);
 
-        const linesPerChunk = totalLinesNeeded; // single request
+        const linesPerChunk = 250;//totalLinesNeeded; // single request
         const fullConversationText = await streamConversation(text, speakers, "", linesPerChunk, countryText, stateText, cityText, true, true);
 
         progressDiv.textContent = 'Conversation generation complete. Now generating audio...';
