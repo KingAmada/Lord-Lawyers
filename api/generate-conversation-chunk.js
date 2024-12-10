@@ -1,3 +1,5 @@
+// api/generate-conversation-chunk.js
+
 const fetch = require('node-fetch');
 
 module.exports = async (req, res) => {
@@ -6,91 +8,117 @@ module.exports = async (req, res) => {
         return;
     }
 
+    const { topicText, speakers, previousLines, linesPerChunk, promoText, isFirstChunk, isLastChunk } = req.body;
+
+    if (!topicText || !speakers || speakers.length < 2 || !linesPerChunk) {
+        res.status(400).send('Missing or invalid parameters.');
+        return;
+    }
+
     try {
-        const {
-            topic,
-            speakers,
-            country,
-            state,
-            city,
-            previousLines,
-            numReplies
-        } = req.body;
+        const openai_api_key = process.env.OPENAI_API_KEY;
 
-        if (!topic || !speakers || speakers.length < 2 || !numReplies) {
-            res.status(400).send('Missing or invalid parameters.');
-            return;
+        // Build speaker descriptions
+        const speakerDescriptions = speakers.map(speaker => {
+            if (speaker.personalityPrompt) {
+                return `${speaker.name}: ${speaker.personalityPrompt}`;
+            } else {
+                return `${speaker.name}: No specific personality prompt.`;
+            }
+        }).join('\n');
+
+
+        // Conditional instructions
+        let introInstruction = '';
+        let conclusionInstruction = '';
+        let advertisementInstruction = '';
+
+        if (isFirstChunk) {
+            introInstruction = '- Begin the podcast with an introduction where the speakers welcome the listeners and mention the topic they will be discussing.';
+            advertisementInstruction = '- At an appropriate point before the advertisement, the speakers should mention they are taking a short break.\n- The advertisement should be presented by a new speaker, "Ad Narrator", who is not part of the main discussion.\n- After the advertisement, the conversation should resume naturally.';
         }
 
-        const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
-
-        if (!OPENAI_API_KEY) {
-            console.error('Missing OpenAI API Key');
-            res.status(500).send('Server misconfiguration: API key missing.');
-            return;
+        if (isLastChunk) {
+            conclusionInstruction = '- Conclude the podcast with the speakers providing closing remarks and thanking the listeners.';
         }
 
-        const speakerDescriptions = speakers
-            .map(s => `${s.name}, a ${s.level} lawyer, speaks with a voice resembling "${s.voice}".`)
-            .join('\n');
-
-        const jurisdiction = `${country}, ${state || ''}, ${city || ''}`.trim();
-        const jurisdictionDetails = jurisdiction
-            ? `Ensure the discussion reflects the laws and regulations of ${jurisdiction}.`
-            : '';
-
+        // Build the prompt with context from previous lines
         let prompt = `
-        You are tasked to create a podcast discussion among lawyers. Below are the details:
+You are to generate an adult-themed podcast conversation between the following people:
 
-        Speakers:
-        ${speakerDescriptions}
+${speakerDescriptions}
 
-        Topic:
-        "${topic}"
+They are discussing the following topic, using explicit raw unfiltered language appropriate for an adult audience:
 
-        Previous Context:
-        ${previousLines || ''}
+"${topicText}"
 
-        Instructions:
-        - Generate ${numReplies} replies as part of the ongoing discussion.
-        - The discussion should be dynamic, with realistic arguments, case references, and legal expertise.
-        - Reflect the jurisdiction: ${jurisdiction}.
-        - Include interruptions and varied response lengths.
-        - Ensure coherence with the context provided.
+An advertisement for the following product/service should be included at an appropriate point in the conversation:
 
-        Output format:
-        - Each line starts with the speaker's name, followed by their dialogue.
+"${promoText}"
+
+Instructions:
+
+${introInstruction}
+${advertisementInstruction}
+${conclusionInstruction}
+
+- Continue the conversation naturally, building on the previous discussion.
+- Include detailed and realistic dialogue, with emotional expressions to give the speakers a more engaging podcast.
+- Include natural interactions with interruptions, overlaps, and varied speaker order.
+- Use fillers and emotional expressions to give the conversation depth.
+- Ensure that speakers interrupt each other naturally and speak in a random order, not following any fixed sequence.
+- Vary response lengths: from single words to longer replies (2-4 sentences).
+- Ensure each speaker's dialogue reflects their personality or instructions as described above.
+- Avoid repeating previous content.
+- Be approximately ${linesPerChunk} lines long.
+
+Previous conversation:
+${previousLines}
+
+Continue the conversation, ensuring coherence with the previous lines.
+
+Format:
+
+- Start each line with the speaker's name and dialogue.
+- Use "--" for interruptions.
+
+Provide the continuation now.
         `;
+
+        const messages = [
+            {
+                role: 'system',
+                content: prompt
+            }
+        ];
 
         const response = await fetch('https://api.openai.com/v1/chat/completions', {
             method: 'POST',
             headers: {
-                'Authorization': `Bearer ${OPENAI_API_KEY}`,
+                'Authorization': `Bearer ${openai_api_key}`,
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                model: 'gpt-4',
-                messages: [{ role: 'system', content: prompt }],
-                max_tokens: 300, // Limit tokens for small chunks
-                temperature: 0.8
+                model: 'gpt-4o',
+                messages: messages,
+                max_tokens: 500,
+                temperature: 1.0
             })
         });
 
         if (!response.ok) {
             const error = await response.json();
             console.error('OpenAI API Error:', error);
-            res.status(500).send(`OpenAI API Error: ${error.error.message}`);
+            res.status(500).send(`Error generating conversation chunk: ${error.error.message}`);
             return;
         }
 
         const data = await response.json();
         const conversationText = data.choices[0].message.content.trim();
 
-        console.log('Generated Replies:', conversationText);
-
         res.status(200).json({ conversationText });
     } catch (error) {
         console.error('Server Error:', error);
-        res.status(500).send('Internal Server Error');
+        res.status(500).send('Server error.');
     }
 };
