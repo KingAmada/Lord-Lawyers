@@ -124,47 +124,51 @@ Use "--" for interruptions.
         res.setHeader('Cache-Control', 'no-cache');
         res.setHeader('Connection', 'keep-alive');
 
-       // Instead of getReader, use async iteration
-const decoder = new TextDecoder();
+        const decoder = new TextDecoder();
+        let partial = '';
 
-try {
-    for await (const chunk of openaiResponse.body) {
-        const text = decoder.decode(chunk, { stream: true });
-        partial += text;
+        try {
+            for await (const chunk of openaiResponse.body) {
+                const text = decoder.decode(chunk, { stream: true });
+                partial += text;
 
-        const lines = partial.split('\n');
-        partial = lines.pop(); // keep incomplete line
+                const lines = partial.split('\n');
+                partial = lines.pop(); // keep incomplete line
 
-        for (const line of lines) {
-            const trimmed = line.trim();
-            if (trimmed.startsWith('data:')) {
-                const jsonStr = trimmed.replace(/^data:\s*/, '');
-                if (jsonStr === '[DONE]') {
-                    // End of stream
-                    res.write('data: [DONE]\n\n');
-                    res.end();
-                    return;
-                }
+                for (const line of lines) {
+                    const trimmed = line.trim();
+                    if (trimmed.startsWith('data:')) {
+                        const jsonStr = trimmed.replace(/^data:\s*/, '');
+                        if (jsonStr === '[DONE]') {
+                            // End of stream
+                            res.write('data: [DONE]\n\n');
+                            res.end();
+                            return;
+                        }
 
-                try {
-                    const parsed = JSON.parse(jsonStr);
-                    const delta = parsed.choices?.[0]?.delta?.content;
-                    if (delta !== undefined) {
-                        res.write(`data: ${JSON.stringify({ content: delta })}\n\n`);
+                        try {
+                            const parsed = JSON.parse(jsonStr);
+                            const delta = parsed.choices?.[0]?.delta?.content;
+                            if (delta !== undefined) {
+                                res.write(`data: ${JSON.stringify({ content: delta })}\n\n`);
+                            }
+                        } catch (err) {
+                            console.error('Error parsing SSE line:', line, err);
+                        }
                     }
-                } catch (err) {
-                    console.error('Error parsing SSE line:', line, err);
                 }
             }
+
+            // If done without [DONE], just end
+            res.write('data: [DONE]\n\n');
+            res.end();
+        } catch (err) {
+            console.error('Error reading stream:', err);
+            res.status(500).send('Internal Server Error');
         }
+
+    } catch (error) {
+        console.error('Server Error:', error);
+        res.status(500).send('Internal Server Error');
     }
-
-    // If done without [DONE], just end
-    res.write('data: [DONE]\n\n');
-    res.end();
-} catch (err) {
-    console.error('Error reading stream:', err);
-    res.status(500).send('Internal Server Error');
-}
-
 };
