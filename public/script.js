@@ -219,6 +219,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function bufferAndDisplayText(content) {
+         console.log('Received content chunk:', content); // Debug log each content chunk
         partialText += content;
         // Split on newline to find complete lines
         const lines = partialText.split('\n');
@@ -227,6 +228,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Display all complete lines
         lines.forEach(ln => {
             if (ln.trim()) {
+                console.log('Displaying line:', ln); // Log lines as they are displayed
                 const lineDiv = document.createElement('div');
                 lineDiv.textContent = ln;
                 conversationDiv.appendChild(lineDiv);
@@ -238,12 +240,14 @@ document.addEventListener('DOMContentLoaded', () => {
     function finalizeConversation() {
         // if any leftover text
         if (partialText.trim()) {
+            console.log('Final leftover text:', partialText.trim()); // Log leftover text before finalizing
             const lineDiv = document.createElement('div');
             lineDiv.textContent = partialText.trim();
             conversationDiv.appendChild(lineDiv);
             conversationDiv.scrollTop = conversationDiv.scrollHeight;
         }
         partialText = '';
+         console.log('Finalization complete.'); // Indicate conversation ended
     }
 
     function parseConversation(conversationText) {
