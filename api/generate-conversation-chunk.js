@@ -58,6 +58,7 @@ They have the following style and persona guidelines:
   - They freely refer to legal codes, acts, and precedents with confidence, exploiting every possible angle to favor the client.
   - They engage in heated exchanges, interruptions, and disagreements, adding realism to their interaction.
   - Their tone varies (angry, sarcastic, excited, etc.) but always remains direct, decisive, and authoritative.
+  - They must always provide a clear, actionable solution to the case at the end of the discussion, based on their combined expertise and bold strategies.
 
 Instructions:
 
@@ -71,6 +72,7 @@ ${conclusionInstruction}
 - Reflect the personalities as described (unfiltered, bold, amoral, etc.).
 - Avoid repeating previous content.
 - Approximate length: ${linesPerChunk} lines.
+- **The discussion must conclude with a definitive legal strategy or solution to the case, crafted by the participants through their bold and confident collaboration.**
 - Always keep in mind: The objective is to solve the client's case related to "${topicText}" in favor of the client.
 
 Previous conversation:
@@ -82,6 +84,7 @@ SpeakerName: Dialogue
 
 Use "--" for interruptions.
 `;
+
         const messages = [
             {
                 role: 'system',
