@@ -55,10 +55,8 @@ module.exports = async (req, res) => {
             return;
         }
 
-        // The response is the audio file content
         const audioData = await ttsResponse.buffer();
 
-        // Send the audio data back to the client
         res.setHeader('Content-Type', 'audio/mpeg');
         res.send(audioData);
     } catch (error) {
