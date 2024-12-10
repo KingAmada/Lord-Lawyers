@@ -1,3 +1,5 @@
+// public/script.js
+
 document.addEventListener('DOMContentLoaded', () => {
     const generateBtn = document.getElementById('generate-btn');
     const textInput = document.getElementById('text-input');
@@ -32,7 +34,6 @@ document.addEventListener('DOMContentLoaded', () => {
         'Legal Scholar'
     ];
 
-    // Initialize speaker configurations
     function initializeSpeakers() {
         const numSpeakers = parseInt(numSpeakersInput.value);
         speakersContainer.innerHTML = '';
@@ -41,27 +42,20 @@ document.addEventListener('DOMContentLoaded', () => {
             const speakerConfig = document.createElement('div');
             speakerConfig.classList.add('speaker-config');
 
-            // Speaker Name Input
             const nameInput = document.createElement('input');
             nameInput.type = 'text';
             nameInput.value = `Lawyer${i + 1}`;
             nameInput.placeholder = `Name`;
 
-            // Voice Selection Dropdown
             const voiceSelect = document.createElement('select');
-
             availableVoices.forEach(voice => {
                 const option = document.createElement('option');
                 option.value = voice.value;
                 option.textContent = voice.name;
                 voiceSelect.appendChild(option);
             });
+            voiceSelect.selectedIndex = i % availableVoices.length;
 
-            // Assign voices in order
-            const voiceIndex = i % availableVoices.length;
-            voiceSelect.selectedIndex = voiceIndex;
-
-            // Role Selection Dropdown
             const roleSelect = document.createElement('select');
             availableRoles.forEach(role => {
                 const option = document.createElement('option');
@@ -86,7 +80,6 @@ document.addEventListener('DOMContentLoaded', () => {
         initializeSpeakers();
     });
 
-    // On page load
     initializeSpeakers();
 
     generateBtn.addEventListener('click', async () => {
@@ -114,7 +107,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         generateBtn.textContent = 'Generating...';
         generateBtn.disabled = true;
-
         showLoading();
 
         try {
@@ -133,7 +125,6 @@ document.addEventListener('DOMContentLoaded', () => {
         progressDiv.textContent = 'Generating conversation...';
         conversationDiv.innerHTML = '';
 
-        // Collect speaker settings
         const speakers = [];
         const speakerConfigs = document.querySelectorAll('.speaker-config');
         speakerConfigs.forEach(config => {
@@ -146,29 +137,22 @@ document.addEventListener('DOMContentLoaded', () => {
             speakers.push({ name, voice, role });
         });
 
-        // Estimate total lines
+        // Calculate lines needed
         const averageWordsPerMinute = 130;
         const averageWordsPerLine = 10;
         const totalWordsNeeded = desiredDuration * averageWordsPerMinute;
         const totalLinesNeeded = Math.ceil(totalWordsNeeded / averageWordsPerLine);
 
-        // We'll request them all at once and let streaming do the rest
-        const linesPerChunk = totalLinesNeeded;
-
-        // Start streaming the conversation
+        const linesPerChunk = totalLinesNeeded; // single request
         const fullConversationText = await streamConversation(text, speakers, "", linesPerChunk, countryText, stateText, cityText, true, true);
 
         progressDiv.textContent = 'Conversation generation complete. Now generating audio...';
 
-        // Parse conversation
         const conversation = parseConversation(fullConversationText);
-
-        // Generate audio
         const audioBuffers = await generateAudioForConversation(conversation, speakers);
 
         progressDiv.textContent = 'All audio generated. Preparing to play...';
 
-        // Create Play button
         const playButton = document.createElement('button');
         playButton.textContent = 'Play Discussion';
         playButton.classList.add('play-button');
@@ -179,6 +163,7 @@ document.addEventListener('DOMContentLoaded', () => {
         conversationDiv.appendChild(playButton);
     }
 
+    let partialText = '';
     async function streamConversation(topicText, speakers, previousLines, linesPerChunk, countryText, stateText, cityText, isFirstChunk, isLastChunk) {
         const response = await fetch('/api/generate-conversation-chunk', {
             method: 'POST',
@@ -194,26 +179,24 @@ document.addEventListener('DOMContentLoaded', () => {
         const reader = response.body.getReader();
         const decoder = new TextDecoder('utf-8');
 
-        let partial = '';
         let fullText = '';
+        partialText = ''; // reset buffering
 
         while (true) {
             const { value, done } = await reader.read();
             if (done) break;
 
             const chunk = decoder.decode(value, {stream:true});
-            partial += chunk;
+            const lines = chunk.split('\n');
 
-            const lines = partial.split('\n');
-            partial = lines.pop(); // keep incomplete line
+            for (let line of lines) {
+                line = line.trim();
+                if (!line.startsWith('data:')) continue;
 
-            for (const line of lines) {
-                const trimmed = line.trim();
-                if (!trimmed.startsWith('data:')) continue;
-
-                const jsonStr = trimmed.replace(/^data:\s*/, '');
+                const jsonStr = line.replace(/^data:\s*/, '');
                 if (jsonStr === '[DONE]') {
-                    // End of stream
+                    // finalize the conversation
+                    finalizeConversation();
                     return fullText;
                 }
 
@@ -222,8 +205,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     const content = parsed.content;
                     if (content) {
                         fullText += content;
-                        // Display partial text as it arrives
-                        displayStreamingText(content);
+                        bufferAndDisplayText(content);
                     }
                 } catch (err) {
                     console.error('Error parsing streaming line:', line, err);
@@ -231,19 +213,18 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        // If we end without [DONE], return what we got
+        // if we somehow ended without [DONE]
+        finalizeConversation();
         return fullText;
     }
 
-    function displayStreamingText(content) {
-        // The streamed content might not align perfectly with lines
-        // We can just show it as it arrives, or wait until the end to parse.
-        // For better user experience, let's append as it arrives.
-        // We'll not split lines here. We'll show raw text for now.
-        // Once done streaming, we parse fully.
+    function bufferAndDisplayText(content) {
+        partialText += content;
+        // Split on newline to find complete lines
+        const lines = partialText.split('\n');
+        partialText = lines.pop(); // keep last partial line
 
-        // Try splitting new content by new lines and show only full lines
-        const lines = content.split('\n');
+        // Display all complete lines
         lines.forEach(ln => {
             if (ln.trim()) {
                 const lineDiv = document.createElement('div');
@@ -254,20 +235,28 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    function finalizeConversation() {
+        // if any leftover text
+        if (partialText.trim()) {
+            const lineDiv = document.createElement('div');
+            lineDiv.textContent = partialText.trim();
+            conversationDiv.appendChild(lineDiv);
+            conversationDiv.scrollTop = conversationDiv.scrollHeight;
+        }
+        partialText = '';
+    }
+
     function parseConversation(conversationText) {
         const lines = conversationText.split('\n').filter(line => line.trim() !== '');
         const conversation = [];
 
         lines.forEach((line, index) => {
-            // Match speaker and dialogue
             const match = line.match(/^([\w\s]+)\([^)]*\):\s*(.+)$/);
             if (match) {
                 let speaker = match[1].trim();
                 let dialogue = match[2].trim();
-
                 const isInterruption = dialogue.endsWith('--');
                 const isContinuation = dialogue.startsWith('--');
-
                 dialogue = dialogue.replace(/^--/, '').replace(/--$/, '').trim();
 
                 conversation.push({
@@ -277,8 +266,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     isContinuation,
                     index
                 });
-            } else {
-                // If line doesn't match, we can ignore or treat as a narrator line
             }
         });
 
@@ -298,14 +285,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 progressDiv.textContent = `Generating audio ${i + 1} of ${conversation.length}...`;
 
                 try {
-                    const speakerVoice = speakers.find(s => s.name === line.speaker)?.voice;
-                    let voiceToUse = speakerVoice;
-                    if (!voiceToUse) {
-                        // fallback voice if not found
-                        voiceToUse = 'echo'; 
-                    }
-
-                    const audioBuffer = await generateAudioBuffer(line.speaker, line.dialogue, voiceToUse, audioContext);
+                    const speakerVoice = speakers.find(s => s.name === line.speaker)?.voice || 'echo';
+                    const audioBuffer = await generateAudioBuffer(line.speaker, line.dialogue, speakerVoice, audioContext);
                     audioBuffers[i] = audioBuffer;
                 } catch (error) {
                     console.error(`Error generating audio for line ${i + 1}:`, error);
@@ -338,14 +319,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const arrayBuffer = await response.arrayBuffer();
-
-        try {
-            const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-            return audioBuffer;
-        } catch (error) {
-            console.error('Error decoding audio data:', error);
-            throw error;
-        }
+        const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+        return audioBuffer;
     }
 
     async function playOverlappingAudio(conversation, audioBuffers) {
@@ -366,7 +341,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const line = conversation[i];
 
             const gainNode = audioContext.createGain();
-            gainNode.gain.value = 1.0; 
+            gainNode.gain.value = 1.0;
 
             const source = audioContext.createBufferSource();
             source.buffer = buffer;
@@ -413,9 +388,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function combineAudioBuffers(audioBuffers, audioContext) {
         const numberOfChannels = audioBuffers[0].numberOfChannels;
         let totalLength = 0;
-        audioBuffers.forEach(buffer => {
-            totalLength += buffer.length;
-        });
+        audioBuffers.forEach(buffer => { totalLength += buffer.length; });
 
         const combinedBuffer = audioContext.createBuffer(
             numberOfChannels,
@@ -440,7 +413,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function audioBufferToWav(buffer, options = {}) {
         const numChannels = buffer.numberOfChannels;
         const sampleRate = buffer.sampleRate;
-        const format = options.float32 ? 3 : 1; // 3 = IEEE Float, 1 = PCM
+        const format = options.float32 ? 3 : 1;
         const bitDepth = format === 3 ? 32 : 16;
 
         let result;
@@ -525,7 +498,6 @@ document.addEventListener('DOMContentLoaded', () => {
         conversationDiv.appendChild(downloadLink);
     }
 
-    // Loading animations
     function showLoading() {
         let loadingOverlay = document.createElement('div');
         loadingOverlay.classList.add('loading-overlay');
