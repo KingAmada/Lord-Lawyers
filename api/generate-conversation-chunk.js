@@ -49,6 +49,9 @@ module.exports = async (req, res) => {
 
         // Generate the conversation prompt
         const prompt = `
+        - You must produce exactly ${linesPerChunk} lines. Do not produce more or fewer than ${linesPerChunk} lines.
+- Once you have written ${linesPerChunk} lines, you must stop immediately.
+
 You are generating a law-firm-style discussion (not a podcast) where multiple lawyers of varying levels of expertise are actively working together to solve a client's case in their favor. They are physically in a law firm meeting room, discussing strategy, citing laws and legal precedents relevant to the case on the topic: "${topicText}".
 
 The scenario takes place in ${cityText}, ${stateText}, ${countryText}.
