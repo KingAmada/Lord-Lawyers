@@ -124,24 +124,20 @@ Use "--" for interruptions.
         res.setHeader('Cache-Control', 'no-cache');
         res.setHeader('Connection', 'keep-alive');
 
-        const decoder = new TextDecoder();
-        const reader = openaiResponse.body.getReader();
-        let partial = '';
+       // Instead of getReader, use async iteration
+const decoder = new TextDecoder();
 
-        while (true) {
-            const { value, done } = await reader.read();
-            if (done) break;
+try {
+    for await (const chunk of openaiResponse.body) {
+        const text = decoder.decode(chunk, { stream: true });
+        partial += text;
 
-            const chunk = decoder.decode(value, { stream: true });
-            partial += chunk;
+        const lines = partial.split('\n');
+        partial = lines.pop(); // keep incomplete line
 
-            const lines = partial.split('\n');
-            partial = lines.pop(); // Keep incomplete line for next iteration
-
-            for (const line of lines) {
-                const trimmed = line.trim();
-                if (!trimmed.startsWith('data:')) continue;
-
+        for (const line of lines) {
+            const trimmed = line.trim();
+            if (trimmed.startsWith('data:')) {
                 const jsonStr = trimmed.replace(/^data:\s*/, '');
                 if (jsonStr === '[DONE]') {
                     // End of stream
@@ -154,7 +150,6 @@ Use "--" for interruptions.
                     const parsed = JSON.parse(jsonStr);
                     const delta = parsed.choices?.[0]?.delta?.content;
                     if (delta !== undefined) {
-                        // Write partial content as SSE data event
                         res.write(`data: ${JSON.stringify({ content: delta })}\n\n`);
                     }
                 } catch (err) {
@@ -162,12 +157,14 @@ Use "--" for interruptions.
                 }
             }
         }
-
-        // If we exit the loop without [DONE], just end
-        res.write('data: [DONE]\n\n');
-        res.end();
-    } catch (error) {
-        console.error('Server Error:', error);
-        res.status(500).send('Internal Server Error');
     }
+
+    // If done without [DONE], just end
+    res.write('data: [DONE]\n\n');
+    res.end();
+} catch (err) {
+    console.error('Error reading stream:', err);
+    res.status(500).send('Internal Server Error');
+}
+
 };
