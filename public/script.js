@@ -165,7 +165,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const estimatedTokensPerLine = 15; 
         const maxLinesPerChunk = Math.floor(maxTokensPerChunk / estimatedTokensPerLine);
 
-        const linesPerChunk = Math.min(maxLinesPerChunk, totalLinesNeeded);
+        const linesPerChunk = 5;//Math.min(maxLinesPerChunk, totalLinesNeeded);
         const totalChunks = Math.ceil(totalLinesNeeded / linesPerChunk);
 
         let previousLines = ''; // To keep track of previous lines for context
