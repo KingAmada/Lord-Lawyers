@@ -4,13 +4,26 @@ const fetch = require('node-fetch');
 
 module.exports = async (req, res) => {
     if (req.method !== 'POST') {
+        console.error('[DEBUG] Invalid method:', req.method);
         res.status(405).send('Method Not Allowed');
         return;
     }
 
     const { topicText, speakers, previousLines, linesPerChunk, countryText, stateText, cityText, isFirstChunk, isLastChunk } = req.body;
+    console.log('[DEBUG] Request body:', {
+        topicText, 
+        speakers, 
+        previousLines, 
+        linesPerChunk, 
+        countryText, 
+        stateText, 
+        cityText, 
+        isFirstChunk, 
+        isLastChunk
+    });
 
     if (!topicText || !speakers || speakers.length < 2 || !linesPerChunk || !countryText || !stateText || !cityText) {
+        console.error('[DEBUG] Missing or invalid parameters.');
         res.status(400).send('Missing or invalid parameters.');
         return;
     }
@@ -95,9 +108,8 @@ SpeakerName (Lawyer Level): Dialogue
 Use "--" for interruptions.
         `;
 
-        const messages = [{ role: 'system', content: prompt }];
+        console.log('[DEBUG] Final prompt:\n', prompt);
 
-        // Request to OpenAI with streaming
         const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
             method: 'POST',
             headers: {
@@ -106,7 +118,7 @@ Use "--" for interruptions.
             },
             body: JSON.stringify({
                 model: 'gpt-4',
-                messages: messages,
+                messages: [{ role: 'system', content: prompt }],
                 max_tokens: 2000,
                 temperature: 1.0,
                 stream: true,
@@ -130,6 +142,8 @@ Use "--" for interruptions.
 
         try {
             for await (const chunk of openaiResponse.body) {
+                console.log('[DEBUG] Raw chunk from OpenAI:', chunk);
+
                 const text = decoder.decode(chunk, { stream: true });
                 partial += text;
 
@@ -138,10 +152,14 @@ Use "--" for interruptions.
 
                 for (const line of lines) {
                     const trimmed = line.trim();
+                    console.log('[DEBUG] SSE line:', trimmed);
+
                     if (trimmed.startsWith('data:')) {
                         const jsonStr = trimmed.replace(/^data:\s*/, '');
+                        console.log('[DEBUG] JSON string:', jsonStr);
+
                         if (jsonStr === '[DONE]') {
-                            // End of stream
+                            console.log('[DEBUG] Received [DONE], ending stream.');
                             res.write('data: [DONE]\n\n');
                             res.end();
                             return;
@@ -151,6 +169,7 @@ Use "--" for interruptions.
                             const parsed = JSON.parse(jsonStr);
                             const delta = parsed.choices?.[0]?.delta?.content;
                             if (delta !== undefined) {
+                                console.log('[DEBUG] Delta content:', delta);
                                 res.write(`data: ${JSON.stringify({ content: delta })}\n\n`);
                             }
                         } catch (err) {
@@ -161,6 +180,7 @@ Use "--" for interruptions.
             }
 
             // If ended without [DONE], just end
+            console.log('[DEBUG] Stream ended without [DONE]. Ending anyway.');
             res.write('data: [DONE]\n\n');
             res.end();
         } catch (err) {
