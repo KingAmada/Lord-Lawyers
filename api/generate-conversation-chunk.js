@@ -1,3 +1,5 @@
+// api/generate-conversation-chunk.js
+
 const fetch = require('node-fetch');
 
 module.exports = async (req, res) => {
@@ -95,7 +97,7 @@ Use "--" for interruptions.
 
         const messages = [{ role: 'system', content: prompt }];
 
-        // OpenAI API streaming request
+        // Make the request to OpenAI with streaming enabled
         const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
             method: 'POST',
             headers: {
@@ -110,29 +112,58 @@ Use "--" for interruptions.
             }),
         });
 
-        // Send headers for SSE
+        if (!openaiResponse.ok) {
+            const errorText = await openaiResponse.text();
+            console.error('OpenAI API Error:', errorText);
+            res.status(500).send(`Error: ${errorText}`);
+            return;
+        }
+
+        // Set headers for SSE
         res.setHeader('Content-Type', 'text/event-stream');
         res.setHeader('Cache-Control', 'no-cache');
         res.setHeader('Connection', 'keep-alive');
 
-        // Stream response to client
-        for await (const chunk of openaiResponse.body) {
-            const payload = chunk.toString().trim();
+        const decoder = new TextDecoder();
+        const reader = openaiResponse.body.getReader();
+        let partial = '';
 
-            if (payload === '') continue;
+        while (true) {
+            const { value, done } = await reader.read();
+            if (done) break;
 
-            try {
-                const data = JSON.parse(payload);
-                const content = data.choices[0]?.delta?.content;
+            const chunk = decoder.decode(value, { stream: true });
+            partial += chunk;
 
-                if (content) {
-                    res.write(`data: ${JSON.stringify({ content })}\n\n`);
+            const lines = partial.split('\n');
+            partial = lines.pop(); // Keep incomplete line for next iteration
+
+            for (const line of lines) {
+                const trimmed = line.trim();
+                if (!trimmed.startsWith('data:')) continue;
+
+                const jsonStr = trimmed.replace(/^data:\s*/, '');
+                if (jsonStr === '[DONE]') {
+                    // End of stream
+                    res.write('data: [DONE]\n\n');
+                    res.end();
+                    return;
                 }
-            } catch (error) {
-                console.error('Error parsing chunk:', payload, error);
+
+                try {
+                    const parsed = JSON.parse(jsonStr);
+                    const delta = parsed.choices?.[0]?.delta?.content;
+                    if (delta !== undefined) {
+                        // Write partial content as SSE data event
+                        res.write(`data: ${JSON.stringify({ content: delta })}\n\n`);
+                    }
+                } catch (err) {
+                    console.error('Error parsing SSE line:', line, err);
+                }
             }
         }
 
+        // If we exit the loop without [DONE], just end
         res.write('data: [DONE]\n\n');
         res.end();
     } catch (error) {
