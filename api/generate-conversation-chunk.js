@@ -19,59 +19,69 @@ module.exports = async (req, res) => {
         const openai_api_key = process.env.OPENAI_API_KEY;
 
         // Build speaker descriptions with their roles
+        // The conversation is a law firm scenario discussing a case
         const speakerDescriptions = speakers.map(speaker => {
-            return `${speaker.name}: A ${speaker.role} in the legal profession.`;
+            return `${speaker.name}: A ${speaker.role} in the legal profession, working in a law firm setting, tasked with solving a case in favor of their client.`;
         }).join('\n');
 
         let introInstruction = '';
         let conclusionInstruction = '';
 
         if (isFirstChunk) {
-            introInstruction = '- Begin the podcast with an introduction where the speakers welcome the listeners and mention the topic and the city they are focusing on.';
+            introInstruction = '- Begin the discussion by introducing the scenario: multiple lawyers in a law firm are gathering to solve the client’s case. Mention the city, state, and country context.';
         }
 
         if (isLastChunk) {
-            conclusionInstruction = '- Conclude the podcast with the speakers providing closing remarks and thanking the listeners.';
+            conclusionInstruction = '- Conclude by having the lawyers summarize the solution and strategy for winning the case for the client.';
         }
 
-        // Build the prompt
+        // Additional persona and style instructions
+        // Each lawyer should speak as if they are an emergency lawyer with a clever, slightly crooked demeanor.
+        // They must respond with bold confidence, citing relevant laws, rules, and regulations favoring the client.
+        // They must always aim to convince using the law, leveraging constitution, user rights, federal, state, and local laws.
+        // Tone varies (angry, sad, happy), be brief, punchy, no uncertainty or lack of knowledge.
+        // The discussion involves real-life style interruptions, references to legal texts, and attempts to solve the case.
+
         let prompt = `
-You are to generate an adult-themed podcast conversation between the following people:
+You are generating a law-firm-style discussion (not a podcast) where multiple lawyers of varying levels of expertise are actively working together to solve a client's case in their favor. They are physically in a law firm meeting room, discussing strategy, citing laws and legal precedents. They may interrupt each other and provide legal references. The ultimate goal is to find the best legal strategy for winning the case for their client.
+
+The scenario takes place in ${cityText}, ${stateText}, ${countryText}.
+
+The participants:
 
 ${speakerDescriptions}
 
-They are discussing the following topic, using explicit raw unfiltered language appropriate for an adult audience:
-
-"${topicText}"
-
-The conversation should be focused around the city of "${cityText}", located in ${stateText}, ${countryText}.
+They have the following style and persona guidelines:
+- Each speaker behaves as an emergency lawyer with a clever, slightly crooked demeanor.
+- They respond with bold confidence, citing relevant laws, rules, and regulations that favor the client.
+- They always aim to convince using the law, leveraging the constitution, user rights, state laws, county laws, and federal laws.
+- Their tone can vary (angry, sad, happy, etc.) but they are always brief, punchy, and convincing.
+- They do not express uncertainty or lack of knowledge.
+- They refer to legal codes, acts, and precedents whenever possible.
+- They are working together (with some interruptions and disagreements) to craft the best possible legal defense and strategy.
 
 Instructions:
 
 ${introInstruction}
 ${conclusionInstruction}
 
-- Continue the conversation naturally, building on the previous discussion.
-- Include detailed and realistic dialogue, with emotional expressions to give the speakers a more engaging podcast.
-- Include natural interactions with interruptions, overlaps, and varied speaker order.
-- Use fillers and emotional expressions to give the conversation depth.
-- Ensure that speakers interrupt each other naturally and speak in a random order, not following any fixed sequence.
-- Vary response lengths: from single words to longer replies (2-4 sentences).
-- Ensure each speaker's dialogue reflects their given role.
+- The conversation should continue naturally, building on previous lines.
+- Include realistic dialogue with emotional expressions, interruptions, and varied speaker order.
+- Use fillers and emotional expressions for depth.
+- Vary response lengths, from single words to longer replies (2-4 sentences).
+- Reflect the personalities as described (confidence, cleverness, etc.).
 - Avoid repeating previous content.
-- Be approximately ${linesPerChunk} lines long.
+- Approximate length: ${linesPerChunk} lines.
+- Always keep in mind: The objective is to solve the client's case in favor of the client.
 
 Previous conversation:
 ${previousLines}
 
-Continue the conversation, ensuring coherence with the previous lines.
+Continue the conversation now. Format each line as:
 
-Format:
+SpeakerName: Dialogue
 
-- Start each line with the speaker's name and dialogue.
-- Use "--" for interruptions.
-
-Provide the continuation now.
+Use "--" for interruptions.
         `;
 
         const messages = [
