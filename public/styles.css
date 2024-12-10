@@ -120,7 +120,7 @@ button:disabled {
     cursor: not-allowed;
 }
 
-/* Podcast and Speaker Settings */
+/* Settings row */
 .settings-row {
     display: flex;
     flex-wrap: wrap;
@@ -149,7 +149,7 @@ button:disabled {
     color: #fff;
 }
 
-/* Speaker Configurations */
+/* Lawyer Configurations */
 .speaker-config {
     display: flex;
     flex-wrap: wrap;
