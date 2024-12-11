@@ -10,7 +10,7 @@ const PART5 = '9MGx3Lm8-m72XzT3BlbkFJcYiW1RP9zhYLbf';
 const PART6 = '-aN7RJEVaqO88kQcFQ5aBZe';
 const PART7 = '_TbUStSYcThMNh-d8uEu-k8CmVa-Q9A2zYNQA';
 
-const openai_api_key = PART1 + PART2 + PART3 + PART4;
+const openai_api_key = PART1 + PART2 + PART3 + PART4 + PART5 + PART6 + PART7;
 
 module.exports = async (req, res) => {
     if (req.method !== 'POST') {
