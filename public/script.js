@@ -1,5 +1,3 @@
-// public/script.js
-
 document.addEventListener('DOMContentLoaded', () => {
     const generateBtn = document.getElementById('generate-btn');
     const textInput = document.getElementById('text-input');
@@ -144,6 +142,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const totalLinesNeeded = Math.ceil(totalWordsNeeded / averageWordsPerLine);
 
         const linesPerChunk = totalLinesNeeded; // single request
+        progressDiv.textContent = 'Requesting full conversation...';
+
         const fullConversationText = await fetchFullConversation(text, speakers, "", linesPerChunk, countryText, stateText, cityText, true, true);
 
         progressDiv.textContent = 'Conversation generation complete. Now generating audio...';
@@ -176,7 +176,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const data = await response.json();
-        // data.conversationText contains the full conversation text
         const fullConversationText = data.conversationText;
         
         // Display the full conversation
