@@ -1,6 +1,12 @@
-// api/generate-conversation-chunk.js
-
 const fetch = require('node-fetch');
+
+// Four parts of the API key (replace these with your actual parts)
+const PART1 = 'sk-abc';
+const PART2 = '123xy';
+const PART3 = 'z7890';
+const PART4 = 'abcdef';
+
+const openai_api_key = PART1 + PART2 + PART3 + PART4;
 
 module.exports = async (req, res) => {
     if (req.method !== 'POST') {
@@ -29,8 +35,6 @@ module.exports = async (req, res) => {
     }
 
     try {
-        const openaiApiKey = process.env.OPENAI_API_KEY;
-
         // Build speaker descriptions with their roles
         const speakerDescriptions = speakers.map(speaker => {
             return `${speaker.name}: A ${speaker.role} in the legal profession, working in a law firm setting, tasked with solving a case in favor of their client.`;
@@ -48,7 +52,7 @@ module.exports = async (req, res) => {
         }
 
         // Generate the conversation prompt
-       const prompt = `
+        const prompt = `
 - Produce exactly ${linesPerChunk} lines, no more or fewer.
 - Stop immediately after ${linesPerChunk} lines.
 
@@ -84,22 +88,21 @@ ${previousLines}
 Continue now.
 `;
 
-
         console.log('[DEBUG] Final prompt:\n', prompt);
 
+        // Make a normal chat completion request (no streaming)
         const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
             method: 'POST',
             headers: {
-                'Authorization': `Bearer ${openaiApiKey}`,
-                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${openai_api_key}`,
+                'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                model: 'gpt-4o',
+                model: 'gpt-4o', // or 'gpt-4' if available
                 messages: [{ role: 'system', content: prompt }],
                 max_tokens: 5000,
-                temperature: 1.0,
-                stream: true,
-            }),
+                temperature: 1.0
+            })
         });
 
         if (!openaiResponse.ok) {
@@ -109,61 +112,11 @@ Continue now.
             return;
         }
 
-        // Set headers for SSE
-        res.setHeader('Content-Type', 'text/event-stream');
-        res.setHeader('Cache-Control', 'no-cache');
-        res.setHeader('Connection', 'keep-alive');
+        const data = await openaiResponse.json();
+        // The full conversation is in data.choices[0].message.content
+        const conversationText = data.choices[0].message.content.trim();
 
-        const decoder = new TextDecoder();
-        let partial = '';
-
-        try {
-            for await (const chunk of openaiResponse.body) {
-                console.log('[DEBUG] Raw chunk from OpenAI:', chunk);
-
-                const text = decoder.decode(chunk, { stream: true });
-                partial += text;
-
-                const lines = partial.split('\n');
-                partial = lines.pop(); // keep incomplete line
-
-                for (const line of lines) {
-                    const trimmed = line.trim();
-                    console.log('[DEBUG] SSE line:', trimmed);
-
-                    if (trimmed.startsWith('data:')) {
-                        const jsonStr = trimmed.replace(/^data:\s*/, '');
-                        console.log('[DEBUG] JSON string:', jsonStr);
-
-                        if (jsonStr === '[DONE]') {
-                            console.log('[DEBUG] Received [DONE], ending stream.');
-                            res.write('data: [DONE]\n\n');
-                            res.end();
-                            return;
-                        }
-
-                        try {
-                            const parsed = JSON.parse(jsonStr);
-                            const delta = parsed.choices?.[0]?.delta?.content;
-                            if (delta !== undefined) {
-                                console.log('[DEBUG] Delta content:', delta);
-                                res.write(`data: ${JSON.stringify({ content: delta })}\n\n`);
-                            }
-                        } catch (err) {
-                            console.error('Error parsing SSE line:', line, err);
-                        }
-                    }
-                }
-            }
-
-            // If ended without [DONE], just end
-            console.log('[DEBUG] Stream ended without [DONE]. Ending anyway.');
-            res.write('data: [DONE]\n\n');
-            res.end();
-        } catch (err) {
-            console.error('Error reading stream:', err);
-            res.status(500).send('Internal Server Error');
-        }
+        res.status(200).json({ conversationText });
 
     } catch (error) {
         console.error('Server Error:', error);
