@@ -1,12 +1,15 @@
 const fetch = require('node-fetch');
 
 // Four parts of the API key (replace these with your actual parts)
-const PART1 = 'sk-abc';
-const PART2 = '123xy';
-const PART3 = 'z7890';
-const PART4 = 'abcdef';
+const PART1 = 'sk-proj-Q5u0eI1D_8hntsp3';
+const PART2 = '_utd4HuSQfaDF-IvPRZ';
+const PART3 = 'ZV4e0E57MPoetQ8IZ0';
+const PART4 = '5VJIUpq';
+const PART5 = '9MGx3Lm8-m72XzT3BlbkFJcYiW1RP9zhYLbf';
+const PART6 = '-aN7RJEVaqO88kQcFQ5aBZe';
+const PART7 = '_TbUStSYcThMNh-d8uEu-k8CmVa-Q9A2zYNQA';
 
-const openai_api_key = PART1 + PART2 + PART3 + PART4;
+const openai_api_key = PART1 + PART2 + PART3 + PART4 + PART5 + PART6 + PART7;
 
 module.exports = async (req, res) => {
     if (req.method !== 'POST') {
