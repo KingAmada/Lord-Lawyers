@@ -144,7 +144,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const totalLinesNeeded = Math.ceil(totalWordsNeeded / averageWordsPerLine);
 
         const linesPerChunk = totalLinesNeeded; // single request
-        const fullConversationText = await streamConversation(text, speakers, "", linesPerChunk, countryText, stateText, cityText, true, true);
+        const fullConversationText = await fetchFullConversation(text, speakers, "", linesPerChunk, countryText, stateText, cityText, true, true);
 
         progressDiv.textContent = 'Conversation generation complete. Now generating audio...';
 
@@ -163,8 +163,7 @@ document.addEventListener('DOMContentLoaded', () => {
         conversationDiv.appendChild(playButton);
     }
 
-    let partialText = '';
-    async function streamConversation(topicText, speakers, previousLines, linesPerChunk, countryText, stateText, cityText, isFirstChunk, isLastChunk) {
+    async function fetchFullConversation(topicText, speakers, previousLines, linesPerChunk, countryText, stateText, cityText, isFirstChunk, isLastChunk) {
         const response = await fetch('/api/generate-conversation-chunk', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -176,78 +175,24 @@ document.addEventListener('DOMContentLoaded', () => {
             throw new Error(`Error generating conversation chunk: ${errorText}`);
         }
 
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder('utf-8');
+        const data = await response.json();
+        // data.conversationText contains the full conversation text
+        const fullConversationText = data.conversationText;
+        
+        // Display the full conversation
+        displayConversation(fullConversationText);
 
-        let fullText = '';
-        partialText = ''; // reset buffering
-
-        while (true) {
-            const { value, done } = await reader.read();
-            if (done) break;
-
-            const chunk = decoder.decode(value, {stream:true});
-            const lines = chunk.split('\n');
-
-            for (let line of lines) {
-                line = line.trim();
-                if (!line.startsWith('data:')) continue;
-
-                const jsonStr = line.replace(/^data:\s*/, '');
-                if (jsonStr === '[DONE]') {
-                    // finalize the conversation
-                    finalizeConversation();
-                    return fullText;
-                }
-
-                try {
-                    const parsed = JSON.parse(jsonStr);
-                    const content = parsed.content;
-                    if (content) {
-                        fullText += content;
-                        bufferAndDisplayText(content);
-                    }
-                } catch (err) {
-                    console.error('Error parsing streaming line:', line, err);
-                }
-            }
-        }
-
-        // if we somehow ended without [DONE]
-        finalizeConversation();
-        return fullText;
+        return fullConversationText;
     }
 
-    function bufferAndDisplayText(content) {
-         console.log('Received content chunk:', content); // Debug log each content chunk
-        partialText += content;
-        // Split on newline to find complete lines
-        const lines = partialText.split('\n');
-        partialText = lines.pop(); // keep last partial line
-
-        // Display all complete lines
-        lines.forEach(ln => {
-            if (ln.trim()) {
-                console.log('Displaying line:', ln); // Log lines as they are displayed
-                const lineDiv = document.createElement('div');
-                lineDiv.textContent = ln;
-                conversationDiv.appendChild(lineDiv);
-                conversationDiv.scrollTop = conversationDiv.scrollHeight;
-            }
-        });
-    }
-
-    function finalizeConversation() {
-        // if any leftover text
-        if (partialText.trim()) {
-            console.log('Final leftover text:', partialText.trim()); // Log leftover text before finalizing
+    function displayConversation(conversationText) {
+        conversationDiv.innerHTML = '';
+        const lines = conversationText.split('\n').filter(line => line.trim() !== '');
+        lines.forEach(line => {
             const lineDiv = document.createElement('div');
-            lineDiv.textContent = partialText.trim();
+            lineDiv.textContent = line;
             conversationDiv.appendChild(lineDiv);
-            conversationDiv.scrollTop = conversationDiv.scrollHeight;
-        }
-        partialText = '';
-         console.log('Finalization complete.'); // Indicate conversation ended
+        });
     }
 
     function parseConversation(conversationText) {
