@@ -22,7 +22,7 @@ app.get('*', (req, res) => {
 app.use(bodyParser.json());
 
 // Define API routes
-app.post('/api/generate-conversation', generateConversation);
+app.post('/api/generate-conversation-chunk', generateConversation);
 app.post('/api/generate-audio', generateAudio);
 
 // Root endpoint for testing
