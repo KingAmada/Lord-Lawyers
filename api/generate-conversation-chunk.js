@@ -107,7 +107,7 @@ Use "--" for interruptions.
             body: JSON.stringify({
                 model: 'gpt-4',
                 messages: messages,
-                max_tokens: 12000,
+                max_tokens: 6850,
                 temperature: 0.3,
                 stream: true,
             }),
