@@ -30,7 +30,7 @@ module.exports = async (req, res) => {
         // Clean dialogue by removing any text within brackets
         const cleanedDialogue = dialogue.replace(/\[(.*?)\]/g, '');
 
-        // Construct the request payload
+        // Construct the request payload for the TTS API
         const requestBody = {
             model: 'tts-1',
             input: cleanedDialogue,
@@ -38,7 +38,7 @@ module.exports = async (req, res) => {
             response_format: 'mp3'
         };
 
-        // Make the API request to OpenAI's TTS endpoint
+        // Make the request to the OpenAI TTS endpoint
         const ttsResponse = await fetch('https://api.openai.com/v1/audio/speech', {
             method: 'POST',
             headers: {
@@ -57,6 +57,7 @@ module.exports = async (req, res) => {
 
         const audioData = await ttsResponse.buffer();
 
+        // Set the content type to MP3 and send the audio data
         res.setHeader('Content-Type', 'audio/mpeg');
         res.send(audioData);
     } catch (error) {
