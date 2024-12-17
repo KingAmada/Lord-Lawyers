@@ -109,10 +109,10 @@ Participants:
 ${speakersInstructions}
 
 Persona & Style Requirements:
-- Produce a thorough discussion with depth, detail, and complexity. 
-- The output should be at least 400 words. If needed or if the discussion naturally extends, it can surpass 2,000 words. There is no upper strict limit, but keep it coherent and on-topic.
+- Produce a thorough discussion with depth, detail, and complexity.
+- The output should be at least 400 words. If needed or if the discussion naturally extends, it can surpass 2,000 words. There is no strict upper limit, but the result should remain coherent and on-topic.
 - The conversation should be rich in legal reasoning, references to laws (based on specialties), precedents, and strategies.
-- Display clear differences between participants by their role, experience level, and specialty. 
+- Display clear differences between participants by their role, experience level, and specialty.
 - If defending: prioritize absolving the client, weakening opposing evidence, and ensuring the client's protection.
 - If prosecuting: emphasize establishing the client's guilt/liability, presenting strong evidence, and ensuring a firm legal stance.
 - All participants may interrupt, dispute, or challenge each other’s assertions, creating a lively, intense debate.
@@ -121,9 +121,9 @@ Persona & Style Requirements:
 
 Instructions:
 - If this is the first chunk of the conversation, start by noting the setting (a law firm in ${cityText}, ${stateText}, ${countryText}) and the objective (to ${defendOrProsecute} in the case about "${topicText}").
-- If this is the last chunk, ensure that the discussion concludes with a clear, well-defined strategy.
+- If this is the last chunk, ensure that after the internal discussion concludes, one of the more senior or specialized lawyers (e.g., the SAN or a leading Lawyer) delivers a final courtroom-style address. This address should present the agreed-upon strategy as a persuasive, polished argument to a judge or jury. The concluding speech should be so compelling that the judge or jury would find it difficult not to favor their side. Incorporate the key points from the discussion—relevant laws, precedents, logical inferences, and moral appeals if suitable—and ensure it sounds like a real, powerful closing statement in a high-stakes trial.
 - Integrate references to relevant legal codes, precedents, and strategic considerations based on each speaker’s specialty and role.
-- Vary the length of each speaker’s turn. Some may speak briefly (just a sentence), while others may present longer, multi-sentence arguments. 
+- Vary the length of each speaker’s turn. Some may speak briefly (just a sentence), while others may present longer, multi-sentence arguments.
 - Make the discussion feel natural, as if participants are responding to and building upon each other’s points.
 - Refer to the previous conversation context where helpful, but do not repeat it unnecessarily.
 
@@ -133,8 +133,9 @@ ${previousLines}
 Format for the dialogue:
 SpeakerName (Role, Specialty): [Their dialogue]
 
-Begin the conversation now and continue until the discussion reaches a natural, comprehensive, and strategic conclusion.
+Begin the conversation now and continue until the discussion reaches a natural, comprehensive, and strategic conclusion, culminating in the final courtroom-style presentation.
 `;
+
 
 
         const messages = [{ role: 'system', content: prompt }];
