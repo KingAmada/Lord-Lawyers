@@ -44,11 +44,22 @@ module.exports = async (req, res) => {
             conclusionInstruction = `- Conclude by having the lawyers summarize the solution and strategy for winning the case related to "${topicText}" for the client.`;
         }
 
+        // Emphasize that each lawyer's level must clearly impact their speech
+        const roleEmphasis = `
+- Reflect the lawyer levels distinctly in their dialogues:
+  - If all are Interns, their speech should sound less confident, more uncertain, echoing others' arguments and showing limited strategic depth.
+  - If some are Junior Associates or Associates, they should show moderate knowledge, sometimes deferring to higher ranks, but still attempt basic arguments and cite common laws.
+  - If there are Lawyers or SANs, their speech should show deep knowledge, advanced strategies, and confidence, referencing obscure precedents and complex loopholes.
+  - If Legal Scholars are present, their responses should have historical, theoretical depth, referencing academic thought, legal theory, and intricate case law interpretations.
+  - Make these differences so evident in their speech patterns, content, and tone that a reader or listener can easily identify who is who based on how they speak and what they say.
+`;
+
         // Generate the conversation prompt
         const prompt = `
-        - You must produce exactly ${linesPerChunk} lines. Do not produce more or fewer than ${linesPerChunk} lines.
+- You must produce exactly ${linesPerChunk} lines. Do not produce more or fewer than ${linesPerChunk} lines.
 - Once you have written ${linesPerChunk} lines, you must stop immediately.
-        You are generating a law-firm-style discussion (not a podcast) where multiple lawyers of varying levels of expertise are actively working together to solve a client's case in their favor. They are physically in a law firm meeting room, discussing strategy, citing laws and legal precedents relevant to the case on the topic: "${topicText}".
+
+You are generating a law-firm-style discussion (not a podcast) where multiple lawyers of varying levels of expertise are actively working together to solve a client's case in their favor. They are physically in a law firm meeting room, discussing strategy, citing laws and legal precedents relevant to the case on the topic: "${topicText}".
 
 The scenario takes place in ${cityText}, ${stateText}, ${countryText}.
 
@@ -79,6 +90,8 @@ They have the following style and persona guidelines:
   - **Senior Advocates (SANs)**: Dominate the discussion with advanced strategies, citing obscure precedents and leveraging loopholes with ease.
   - **Judges**: Offer a balanced perspective, emphasizing precedents, case interpretations, and procedural expertise.
   - **Legal Scholars**: Dive into historical and theoretical aspects of the law, providing intellectual depth.
+
+${roleEmphasis}
 
 - The conversation must conclude with a definitive legal strategy for solving the client's case.
 
@@ -119,7 +132,7 @@ Use "--" for interruptions.
             body: JSON.stringify({
                 model: 'gpt-4',
                 messages: messages,
-                max_tokens: 5000, // Increased to accommodate longer responses
+                max_tokens: 5000, // Adjust as needed
                 temperature: 0.3,
             }),
         });
