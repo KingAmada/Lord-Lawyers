@@ -43,10 +43,20 @@ document.addEventListener('DOMContentLoaded', () => {
         'Legal Scholar'
     ];
 
+    // 12 Specialties
     const availableSpecialties = [
-        { name: 'Criminal Lawyer', value: 'Criminal' },
-        { name: 'Property Lawyer', value: 'Property' },
-        { name: 'Contract Lawyer', value: 'Contract' }
+        { name: 'Bankruptcy Lawyer', value: 'Bankruptcy' },
+        { name: 'Business Lawyer (Corporate Lawyer)', value: 'Business' },
+        { name: 'Constitutional Lawyer', value: 'Constitutional' },
+        { name: 'Criminal Defense Lawyer', value: 'Criminal defense' },
+        { name: 'Employment and Labor Lawyer', value: 'Employment and labor' },
+        { name: 'Entertainment Lawyer', value: 'Entertainment' },
+        { name: 'Estate Planning Lawyer', value: 'Estate planning' },
+        { name: 'Family Lawyer', value: 'Family' },
+        { name: 'Immigration Lawyer', value: 'Immigration' },
+        { name: 'Intellectual Property (IP) Lawyer', value: 'Intellectual property (IP)' },
+        { name: 'Personal Injury Lawyer', value: 'Personal injury' },
+        { name: 'Tax Lawyer', value: 'Tax' }
     ];
 
     // ============================
@@ -82,7 +92,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 roleSelect.appendChild(option);
             });
 
-            // Specialty dropdown
             const specialtySelect = document.createElement('select');
             availableSpecialties.forEach(spec => {
                 const option = document.createElement('option');
@@ -102,6 +111,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Load previous session from localStorage if available
     loadPreviousSession();
+    initializeSpeakers();
 
     numSpeakersInput.addEventListener('change', () => {
         let numSpeakers = parseInt(numSpeakersInput.value);
@@ -110,8 +120,6 @@ document.addEventListener('DOMContentLoaded', () => {
         numSpeakersInput.value = numSpeakers;
         initializeSpeakers();
     });
-
-    initializeSpeakers();
 
     // Defend/Prosecute mode switch
     modeSwitch.addEventListener('change', () => {
@@ -145,7 +153,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // Save current session to localStorage
+        // Save current session
         saveCurrentSession(text, desiredDuration, countryText, stateText, cityText);
 
         generateBtn.textContent = 'Generating...';
@@ -176,7 +184,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const { linesPerChunk, totalWordsNeeded } = calculateLineAndWordCount(desiredDuration);
         const defendOrProsecute = modeSwitch.checked ? 'prosecute' : 'defend';
 
-        // Show stats before generation
+        // Show stats
         updateStatsPanel(totalWordsNeeded, linesPerChunk);
 
         const fullConversationText = await generateConversation(
@@ -198,8 +206,6 @@ document.addEventListener('DOMContentLoaded', () => {
         progressDiv.textContent = 'Now generating audio...';
 
         const conversation = parseConversation(fullConversationText);
-
-        // Display a progress bar for audio generation
         let progressBar = createProgressBar(conversation.length);
         progressDiv.appendChild(progressBar);
 
