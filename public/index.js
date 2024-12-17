@@ -2,7 +2,7 @@
 
 const express = require('express');
 const bodyParser = require('body-parser');
-const generateConversation = require('./api/generate-conversation');
+const generateConversation = require('./api/generate-conversation-chunk');
 const generateAudio = require('./api/generate-audio');
 
 const app = express();
