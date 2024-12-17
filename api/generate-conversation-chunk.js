@@ -52,6 +52,9 @@ SpeakerName (Lawyer Level): Dialogue
 
 Use "--" for interruptions.
 
+${introInstruction}
+${conclusionInstruction}
+
 Previous conversation:
 ${previousLines}
 
@@ -70,7 +73,7 @@ Continue the conversation now.
             body: JSON.stringify({
                 model: 'gpt-4',
                 messages: messages,
-                max_tokens: 3000, // Adjust as needed
+                max_tokens: 7000, // Increased to accommodate longer responses
                 temperature: 0.3,
             }),
         });
