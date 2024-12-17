@@ -8,6 +8,16 @@ const generateAudio = require('./api/generate-audio');
 const app = express();
 const port = process.env.PORT || 3000;
 
+const path = require('path');
+
+// Serve static files from the "public" folder
+app.use(express.static(path.join(__dirname, 'public')));
+
+// Fallback to index.html for any unmatched routes
+app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
 // Middleware to parse JSON
 app.use(bodyParser.json());
 
