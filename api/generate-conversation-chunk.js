@@ -101,43 +101,41 @@ ${specialtyInstructionsBlock}
 ${modeFocus}
 `;
 
-        const prompt = `
-- Produce exactly ${linesPerChunk} lines. Stop after ${linesPerChunk} lines.
-
-Scenario: Lawyers of various roles and specialties meet in ${cityText}, ${stateText}, ${countryText} to ${defendOrProsecute} in a case about "${topicText}" and aim to win.
+       const prompt = `
+Scenario:
+Lawyers of various roles and specialties have convened in ${cityText}, ${stateText}, ${countryText} to ${defendOrProsecute} a case related to "${topicText}". They aim to produce a comprehensive and highly detailed ${defendOrProsecute === 'defend' ? 'defense' : 'prosecution'} strategy. Multiple lawyers, each with distinct roles and specialties, discuss and debate the issues at length.
 
 Participants:
 ${speakersInstructions}
 
-Persona & Style:
-- Unethical, amoral, serving client's interest if defending, or aggressively building a case if prosecuting.
-- Direct, bold, authoritative. No disclaimers.
-- Emotional variation allowed, but confident.
-- Interruptions, tension welcomed.
-- Don't repeat previous content unnecessarily.
-
-${roleEmphasis}
-
-The conversation ends with a definitive ${defendOrProsecute === 'defend' ? 'defense' : 'prosecution'} strategy.
+Persona & Style Requirements:
+- Produce a thorough discussion with depth, detail, and complexity. 
+- The output should be at least 400 words. If needed or if the discussion naturally extends, it can surpass 2,000 words. There is no upper strict limit, but keep it coherent and on-topic.
+- The conversation should be rich in legal reasoning, references to laws (based on specialties), precedents, and strategies.
+- Display clear differences between participants by their role, experience level, and specialty. 
+- If defending: prioritize absolving the client, weakening opposing evidence, and ensuring the client's protection.
+- If prosecuting: emphasize establishing the client's guilt/liability, presenting strong evidence, and ensuring a firm legal stance.
+- All participants may interrupt, dispute, or challenge each other’s assertions, creating a lively, intense debate.
+- Emotional variation is allowed, but maintain confidence and authority. No disclaimers, no softening language—be direct and bold.
+- The final portion of the discussion should naturally coalesce into a definitive ${defendOrProsecute === 'defend' ? 'defense' : 'prosecution'} strategy that all participants either agree upon or acknowledge as the chosen path.
 
 Instructions:
-${introInstruction}
-${conclusionInstruction}
+- If this is the first chunk of the conversation, start by noting the setting (a law firm in ${cityText}, ${stateText}, ${countryText}) and the objective (to ${defendOrProsecute} in the case about "${topicText}").
+- If this is the last chunk, ensure that the discussion concludes with a clear, well-defined strategy.
+- Integrate references to relevant legal codes, precedents, and strategic considerations based on each speaker’s specialty and role.
+- Vary the length of each speaker’s turn. Some may speak briefly (just a sentence), while others may present longer, multi-sentence arguments. 
+- Make the discussion feel natural, as if participants are responding to and building upon each other’s points.
+- Refer to the previous conversation context where helpful, but do not repeat it unnecessarily.
 
-- Continue from previous lines naturally.
-- Use realistic dialogue, vary lengths (1 word to 2-4 sentences), reflect roles & specialties.
-- Exactly ${linesPerChunk} lines, then stop.
-
-Previous conversation:
+Previous conversation (for context, do not repeat verbatim):
 ${previousLines}
 
-Format:
-SpeakerName (Lawyer Level): Dialogue
+Format for the dialogue:
+SpeakerName (Role, Specialty): [Their dialogue]
 
-Use "--" for interruptions.
+Begin the conversation now and continue until the discussion reaches a natural, comprehensive, and strategic conclusion.
+`;
 
-Begin now.
-        `;
 
         const messages = [{ role: 'system', content: prompt }];
 
