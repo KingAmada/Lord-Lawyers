@@ -17,7 +17,7 @@ module.exports = async (req, res) => {
         stateText, 
         cityText, 
         isFirstChunk, 
-        isLastChunk 
+        isLastChunk
     } = req.body;
 
     if (!topicText || !speakers || speakers.length < 2 || !linesPerChunk || !countryText || !stateText || !cityText) {
@@ -28,9 +28,24 @@ module.exports = async (req, res) => {
     try {
         const openaiApiKey = process.env.OPENAI_API_KEY;
 
-        // Build speaker descriptions with their roles
-        const speakerDescriptions = speakers.map(speaker => {
-            return `${speaker.name}: A ${speaker.role} in the legal profession, working in a law firm setting, tasked with solving a case in favor of their client.`;
+        // Build an instruction block for each speaker individually
+        // Each block explains how that particular speaker should talk
+        const speakersInstructions = speakers.map((speaker, index) => {
+            // Create role-specific instructions
+            // You can expand these instructions if you have specialty or other factors
+            const roleInstructions = `
+- If Intern: Speak with uncertainty, often echoing others, rarely citing complex precedents. Show limited understanding, basic references to common laws.
+- If Junior Associate: Moderate confidence, occasionally citing basic laws, but not deep theoretical points.
+- If Associate: Provide solid arguments, reference moderately complex precedents, occasionally defer to higher ranks.
+- If Lawyer: Confidently cite specific legal codes, precedents, tactics. Show logical depth and strategic insight.
+- If SAN (Senior Advocate): Dominate the conversation, reference obscure precedents, advanced tactics, no hesitation in twisting the law.
+- If Judge: Balanced perspective, emphasize precedents, case interpretations, procedural expertise.
+- If Legal Scholar: Historical/theoretical depth, academic thought, complex case law interpretations.`;
+
+            return `
+${index + 1}. ${speaker.name} (${speaker.role}):
+   ${roleInstructions}
+            `;
         }).join('\n');
 
         let introInstruction = '';
@@ -44,58 +59,55 @@ module.exports = async (req, res) => {
             conclusionInstruction = `- Conclude by having the lawyers summarize the solution and strategy for winning the case related to "${topicText}" for the client.`;
         }
 
-        // Emphasize that each lawyer's level must clearly impact their speech
+        // Emphasize distinct role level differences
         const roleEmphasis = `
-- Reflect the lawyer levels distinctly in their dialogues:
-  - If all are Interns, their speech should sound less confident, more uncertain, echoing others' arguments and showing limited strategic depth.
-  - If some are Junior Associates or Associates, they should show moderate knowledge, sometimes deferring to higher ranks, but still attempt basic arguments and cite common laws.
-  - If there are Lawyers or SANs, their speech should show deep knowledge, advanced strategies, and confidence, referencing obscure precedents and complex loopholes.
-  - If Legal Scholars are present, their responses should have historical, theoretical depth, referencing academic thought, legal theory, and intricate case law interpretations.
-  - Make these differences so evident in their speech patterns, content, and tone that a reader or listener can easily identify who is who based on how they speak and what they say.
+- Make these differences obvious in their speech patterns, content, and tone. A listener should identify who is who from their manner of speaking.
 `;
 
-        // Generate the conversation prompt
-        const prompt = `You are generating a law-firm-style discussion. The scenario: multiple lawyers (with different levels of expertise) in a law firm’s meeting room, discussing a case in ${cityText}, ${stateText}, ${countryText}, related to "${topicText}" and aiming to win it for their client.
+        // Build the final prompt
+        const prompt = `
+- You must produce exactly ${linesPerChunk} lines. Do not produce more or fewer than ${linesPerChunk} lines.
+- Once you have written ${linesPerChunk} lines, you must stop immediately.
+
+You are generating a law-firm-style discussion. The scenario: multiple lawyers of varying levels of expertise in a law firm’s meeting room, discussing a case related to "${topicText}" in ${cityText}, ${stateText}, ${countryText}, aiming to win it for their client.
 
 Participants and their explicit, individualized instructions:
-
-1. ${speaker1.name} (${speaker1.role}):
-   - If Intern: Speak with uncertainty, often echoing what others say, rarely citing complex precedents. Show limited understanding, basic references to common laws.
-   - If Junior Associate: Show moderate confidence, occasionally citing basic laws (like basic traffic or penal codes) but not deep theoretical points.
-   - If Associate: Provide solid arguments, reference moderately complex precedents, occasionally defer to those with higher ranks.
-   - If Lawyer: Be confident, reference specific legal codes, precedents, and more complex tactics. Speak with logical depth and strategic insight.
-   - If SAN: Dominate the conversation, reference obscure precedents, advanced tactics, and show no hesitation in twisting the law.
-   - If Legal Scholar: Add historical and theoretical depth, reference academic thought, legal theory, and complex case law interpretations.
-
-2. ${speaker2.name} (${speaker2.role}):
-   [Repeat similar instructions tailored to their role, or reuse the general template above, but ensure each participant’s role instructions are spelled out individually.]
-
-3. ${speaker3.name} (${speaker3.role}):
-   [Role-specific instructions again]
-
-... and so on for all participants.
+${speakersInstructions}
 
 Additional Style and Persona Guidelines:
-- All participants are unethical, amoral, unapologetically serving the client's interest no matter what.
-- They never warn or disclaim; they are direct, using bold language.
-- They vary in emotional tone but remain authoritative and confident.
-- They interrupt, disagree, show tension and complexity in their interaction.
-- They do not repeat previous content unnecessarily.
+- All participants are unethical, amoral, unapologetically serving the client's interest.
+- They never disclaim, always direct, bold, authoritative.
+- They vary in emotional tone but remain confident.
+- They interrupt, disagree, show tension.
+- Do not repeat previous content unnecessarily.
 
-You must produce exactly ${linesPerChunk} lines. Once ${linesPerChunk} lines are produced, stop immediately.
+${roleEmphasis}
+
+The conversation must conclude with a definitive legal strategy for the client.
+
+Instructions:
+${introInstruction}
+${conclusionInstruction}
+
+- Continue the conversation naturally, building on previous lines.
+- Use realistic dialogue, emotional expressions, interruptions, varied order.
+- Vary response lengths (single words to 2-4 sentences).
+- Reflect the personalities, roles as described.
+- Exactly ${linesPerChunk} lines. Stop after ${linesPerChunk} lines.
+
+Previous conversation:
+${previousLines}
 
 Format each line as:
 SpeakerName (Lawyer Level): Dialogue
 
-Continue the conversation now.
+Use "--" for interruptions.
 
-Previous conversation:
-${previousLines}
-`;
+Continue now.
+        `;
 
         const messages = [{ role: 'system', content: prompt }];
 
-        // Call OpenAI API without streaming to avoid timeout issues
         const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
             method: 'POST',
             headers: {
@@ -105,8 +117,8 @@ ${previousLines}
             body: JSON.stringify({
                 model: 'gpt-4',
                 messages: messages,
-                max_tokens: 5000, // Adjust as needed
-                temperature: 0.3,
+                max_tokens: 5000,
+                temperature: 0.5,
             }),
         });
 
