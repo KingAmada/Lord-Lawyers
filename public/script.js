@@ -164,7 +164,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function generateConversation(topicText, speakers, previousLines, linesPerChunk, countryText, stateText, cityText, isFirstChunk, isLastChunk) {
-        const response = await fetch('/api/generate-conversation', {
+        const response = await fetch('/api/generate-conversation-chunk', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ topicText, speakers, previousLines, linesPerChunk, countryText, stateText, cityText, isFirstChunk, isLastChunk })
