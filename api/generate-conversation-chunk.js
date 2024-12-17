@@ -1,4 +1,4 @@
-// api/generate-conversation-chunk.js
+// api/generate-conversation.js
 
 const fetch = require('node-fetch');
 
@@ -8,7 +8,17 @@ module.exports = async (req, res) => {
         return;
     }
 
-    const { topicText, speakers, previousLines, linesPerChunk, countryText, stateText, cityText, isFirstChunk, isLastChunk } = req.body;
+    const { 
+        topicText, 
+        speakers, 
+        previousLines, 
+        linesPerChunk, 
+        countryText, 
+        stateText, 
+        cityText, 
+        isFirstChunk, 
+        isLastChunk 
+    } = req.body;
 
     if (!topicText || !speakers || speakers.length < 2 || !linesPerChunk || !countryText || !stateText || !cityText) {
         res.status(400).send('Missing or invalid parameters.');
@@ -36,12 +46,21 @@ module.exports = async (req, res) => {
 
         // Generate the conversation prompt
         const prompt = `
-Generate a law-firm-style discussion where lawyers collaborate on a case: "${topicText}" in ${cityText}, ${stateText}, ${countryText}. Participants vary in expertise (${speakerDescriptions}) and prioritize the client’s interest above all else, citing laws, loopholes, and precedents boldly. Responses are unfiltered, confident, and heated, reflecting lawyer levels (interns to scholars). Conclude with a clear legal strategy. Use realistic, varied dialogue with emotional depth, avoiding repetition. Produce exactly ${linesPerChunk} lines.
-`;
+Generate a law-firm-style discussion where lawyers collaborate on a case: "${topicText}" in ${cityText}, ${stateText}, ${countryText}. Participants vary in expertise (${speakerDescriptions}) and prioritize the client’s interest above all else, citing laws, loopholes, and precedents boldly. Responses are unfiltered, confident, and heated, reflecting lawyer levels (interns to scholars). ${isLastChunk ? 'Conclude with a clear legal strategy.' : ''} Use realistic, varied dialogue with emotional depth, avoiding repetition. Produce exactly ${linesPerChunk} lines. Format each line as:
+
+SpeakerName (Lawyer Level): Dialogue
+
+Use "--" for interruptions.
+
+Previous conversation:
+${previousLines}
+
+Continue the conversation now.
+        `;
 
         const messages = [{ role: 'system', content: prompt }];
 
-        // Request to OpenAI with streaming
+        // Call OpenAI API without streaming to avoid timeout issues
         const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
             method: 'POST',
             headers: {
@@ -51,9 +70,8 @@ Generate a law-firm-style discussion where lawyers collaborate on a case: "${top
             body: JSON.stringify({
                 model: 'gpt-4',
                 messages: messages,
-                max_tokens: 6850,
+                max_tokens: 3000, // Adjust as needed
                 temperature: 0.3,
-                stream: true,
             }),
         });
 
@@ -64,53 +82,10 @@ Generate a law-firm-style discussion where lawyers collaborate on a case: "${top
             return;
         }
 
-        // Set headers for SSE
-        res.setHeader('Content-Type', 'text/event-stream');
-        res.setHeader('Cache-Control', 'no-cache');
-        res.setHeader('Connection', 'keep-alive');
+        const data = await openaiResponse.json();
+        const generatedText = data.choices[0].message.content.trim();
 
-        const decoder = new TextDecoder();
-        let partial = '';
-
-        try {
-            for await (const chunk of openaiResponse.body) {
-                const text = decoder.decode(chunk, { stream: true });
-                partial += text;
-
-                const lines = partial.split('\n');
-                partial = lines.pop(); // keep incomplete line
-
-                for (const line of lines) {
-                    const trimmed = line.trim();
-                    if (trimmed.startsWith('data:')) {
-                        const jsonStr = trimmed.replace(/^data:\s*/, '');
-                        if (jsonStr === '[DONE]') {
-                            // End of stream
-                            res.write('data: [DONE]\n\n');
-                            res.end();
-                            return;
-                        }
-
-                        try {
-                            const parsed = JSON.parse(jsonStr);
-                            const delta = parsed.choices?.[0]?.delta?.content;
-                            if (delta !== undefined) {
-                                res.write(`data: ${JSON.stringify({ content: delta })}\n\n`);
-                            }
-                        } catch (err) {
-                            console.error('Error parsing SSE line:', line, err);
-                        }
-                    }
-                }
-            }
-
-            // If ended without [DONE], just end
-            res.write('data: [DONE]\n\n');
-            res.end();
-        } catch (err) {
-            console.error('Error reading stream:', err);
-            res.status(500).send('Internal Server Error');
-        }
+        res.status(200).json({ content: generatedText });
 
     } catch (error) {
         console.error('Server Error:', error);
