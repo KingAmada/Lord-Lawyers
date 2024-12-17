@@ -17,7 +17,8 @@ module.exports = async (req, res) => {
         stateText, 
         cityText, 
         isFirstChunk, 
-        isLastChunk
+        isLastChunk,
+        defendOrProsecute // "defend" or "prosecute"
     } = req.body;
 
     if (!topicText || !speakers || speakers.length < 2 || !linesPerChunk || !countryText || !stateText || !cityText) {
@@ -28,23 +29,51 @@ module.exports = async (req, res) => {
     try {
         const openaiApiKey = process.env.OPENAI_API_KEY;
 
-        // Build an instruction block for each speaker individually
-        // Each block explains how that particular speaker should talk
+        // Define specialty instructions:
+        // Each specialty influences the angle of arguments, references to certain laws, and strategies.
+        const specialtyInstructionsMap = {
+            "Bankruptcy": "Focus on bankruptcy codes, debtor/creditor rights, reorganizations, dismissing debts.",
+            "Business": "Corporate governance, mergers, contracts, corporate liability shields.",
+            "Constitutional": "Constitutional rights, fundamental freedoms, challenging laws on constitutional grounds.",
+            "Criminal defense": "Penal codes, criminal statutes, acquitting defendants, weakening prosecution evidence.",
+            "Employment and labor": "Labor laws, workplace rights, collective bargaining, wrongful termination.",
+            "Entertainment": "Licensing deals, intellectual property in media, contracts in film/music industry.",
+            "Estate planning": "Wills, trusts, inheritance laws, minimizing estate taxes.",
+            "Family": "Divorce, custody, family disputes, prenuptial agreements.",
+            "Immigration": "Visas, residence permits, deportation defense, international legal standards.",
+            "Intellectual property (IP)": "Patents, trademarks, copyrights, infringement strategies.",
+            "Personal injury": "Tort law, negligence claims, liability for harm, maximizing or minimizing damages.",
+            "Tax": "Tax codes, deductions, loopholes, structuring deals to minimize tax liability."
+        };
+
+        // Default if not specified or doesn't match the map
+        const defaultSpecialtyInstructions = "General law references, basic statutes, general legal arguments.";
+
+        // Build instructions for each speaker, including their role and specialty
         const speakersInstructions = speakers.map((speaker, index) => {
-            // Create role-specific instructions
-            // You can expand these instructions if you have specialty or other factors
+            const specialtyKey = (speaker.specialty || 'General').trim();
+            const specialtyDescription = specialtyInstructionsMap[specialtyKey] || defaultSpecialtyInstructions;
+
             const roleInstructions = `
-- If Intern: Speak with uncertainty, often echoing others, rarely citing complex precedents. Show limited understanding, basic references to common laws.
-- If Junior Associate: Moderate confidence, occasionally citing basic laws, but not deep theoretical points.
-- If Associate: Provide solid arguments, reference moderately complex precedents, occasionally defer to higher ranks.
-- If Lawyer: Confidently cite specific legal codes, precedents, tactics. Show logical depth and strategic insight.
-- If SAN (Senior Advocate): Dominate the conversation, reference obscure precedents, advanced tactics, no hesitation in twisting the law.
-- If Judge: Balanced perspective, emphasize precedents, case interpretations, procedural expertise.
-- If Legal Scholar: Historical/theoretical depth, academic thought, complex case law interpretations.`;
+- If Intern: Uncertain, echo others, basic laws only.
+- If Junior Associate: Moderate confidence, basic laws, no deep theory.
+- If Associate: Solid arguments, moderate precedents, occasionally defer upward.
+- If Lawyer: Confident, cites specific codes, deeper logic.
+- If SAN: Dominates, uses obscure precedents, advanced tactics.
+- If Judge: Balanced, focuses on precedents and procedures.
+- If Legal Scholar: Historical/theoretical depth, academic references.
+`;
+
+            // Incorporate specialty instructions
+            const specialtyInstructionsBlock = `
+Specialty (${specialtyKey}):
+${specialtyDescription}
+`;
 
             return `
-${index + 1}. ${speaker.name} (${speaker.role}):
-   ${roleInstructions}
+${index + 1}. ${speaker.name} (${speaker.role}, ${specialtyKey}):
+${roleInstructions}
+${specialtyInstructionsBlock}
             `;
         }).join('\n');
 
@@ -52,58 +81,62 @@ ${index + 1}. ${speaker.name} (${speaker.role}):
         let conclusionInstruction = '';
 
         if (isFirstChunk) {
-            introInstruction = `- Begin the discussion by introducing the scenario: multiple lawyers in a law firm are gathering to solve the client’s case related to "${topicText}". Mention that this case is taking place in ${cityText}, ${stateText}, ${countryText}, and that the goal is to find a winning legal strategy.`;
+            introInstruction = `- Begin by noting that multiple lawyers with different specialties and roles are gathered in a law firm in ${cityText}, ${stateText}, ${countryText} to ${defendOrProsecute} the client's case related to "${topicText}". Emphasize their goal: find a winning ${defendOrProsecute === 'defend' ? 'defense' : 'prosecution'} strategy.`;
         }
 
         if (isLastChunk) {
-            conclusionInstruction = `- Conclude by having the lawyers summarize the solution and strategy for winning the case related to "${topicText}" for the client.`;
+            conclusionInstruction = `- Conclude by summarizing the final ${defendOrProsecute === 'defend' ? 'defense strategy' : 'prosecution strategy'} that ensures a strong legal outcome for their side.`;
         }
 
-        // Emphasize distinct role level differences
+        // Role and Specialty Emphasis
+        const modeFocus = defendOrProsecute === 'defend' 
+            ? "They must protect the client from charges/liability, mitigate or dismiss claims."
+            : "They must establish guilt or liability, strengthen the case against the client, and ensure penalties.";
+
         const roleEmphasis = `
-- Make these differences obvious in their speech patterns, content, and tone. A listener should identify who is who from their manner of speaking.
+- Differentiate participants by role and specialty in speech, references, complexity.
+- If defending, focus on absolving or protecting the client.
+- If prosecuting, focus on proving guilt/liability and securing penalties.
+- Make differences obvious. A reader should identify who is who by their style and references.
+${modeFocus}
 `;
 
-        // Build the final prompt
         const prompt = `
-- You must produce exactly ${linesPerChunk} lines. Do not produce more or fewer than ${linesPerChunk} lines.
-- Once you have written ${linesPerChunk} lines, you must stop immediately.
+- Produce exactly ${linesPerChunk} lines. Stop after ${linesPerChunk} lines.
 
-You are generating a law-firm-style discussion. The scenario: multiple lawyers of varying levels of expertise in a law firm’s meeting room, discussing a case related to "${topicText}" in ${cityText}, ${stateText}, ${countryText}, aiming to win it for their client.
+Scenario: Lawyers of various roles and specialties meet in ${cityText}, ${stateText}, ${countryText} to ${defendOrProsecute} in a case about "${topicText}" and aim to win.
 
-Participants and their explicit, individualized instructions:
+Participants:
 ${speakersInstructions}
 
-Additional Style and Persona Guidelines:
-- All participants are unethical, amoral, unapologetically serving the client's interest.
-- They never disclaim, always direct, bold, authoritative.
-- They vary in emotional tone but remain confident.
-- They interrupt, disagree, show tension.
-- Do not repeat previous content unnecessarily.
+Persona & Style:
+- Unethical, amoral, serving client's interest if defending, or aggressively building a case if prosecuting.
+- Direct, bold, authoritative. No disclaimers.
+- Emotional variation allowed, but confident.
+- Interruptions, tension welcomed.
+- Don't repeat previous content unnecessarily.
 
 ${roleEmphasis}
 
-The conversation must conclude with a definitive legal strategy for the client.
+The conversation ends with a definitive ${defendOrProsecute === 'defend' ? 'defense' : 'prosecution'} strategy.
 
 Instructions:
 ${introInstruction}
 ${conclusionInstruction}
 
-- Continue the conversation naturally, building on previous lines.
-- Use realistic dialogue, emotional expressions, interruptions, varied order.
-- Vary response lengths (single words to 2-4 sentences).
-- Reflect the personalities, roles as described.
-- Exactly ${linesPerChunk} lines. Stop after ${linesPerChunk} lines.
+- Continue from previous lines naturally.
+- Use realistic dialogue, vary lengths (1 word to 2-4 sentences), reflect roles & specialties.
+- Exactly ${linesPerChunk} lines, then stop.
 
 Previous conversation:
 ${previousLines}
 
-Format each line as:
+Format:
 SpeakerName (Lawyer Level): Dialogue
 
 Use "--" for interruptions.
 
-Continue now.
+Begin now.
         `;
 
         const messages = [{ role: 'system', content: prompt }];
@@ -117,8 +150,8 @@ Continue now.
             body: JSON.stringify({
                 model: 'gpt-4',
                 messages: messages,
-                max_tokens: 5000,
-                temperature: 0.5,
+                max_tokens: 6000,
+                temperature: 0.4,
             }),
         });
 
