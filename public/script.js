@@ -241,8 +241,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function calculateLineAndWordCount(desiredDuration) {
-        const averageWordsPerMinute = 130;
-        const averageWordsPerLine = 10;
+        const averageWordsPerMinute = 230;
+        const averageWordsPerLine = 20;
         const totalWordsNeeded = desiredDuration * averageWordsPerMinute;
         const linesPerChunk = Math.ceil(totalWordsNeeded / averageWordsPerLine);
         return { linesPerChunk, totalWordsNeeded };
