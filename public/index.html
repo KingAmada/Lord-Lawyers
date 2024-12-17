@@ -3,14 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <title>⚖️ Law Firm Case Discussion</title>
+    <!-- Include Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
     <div class="container">
         <h1>⚖️ Law Firm Case Discussion</h1>
+
+        <!-- Text Input for Case Details -->
         <textarea id="text-input" placeholder="Enter details about the case here..."></textarea>
 
+        <!-- Duration and Number of Lawyers -->
         <div class="settings-row">
             <div>
                 <label for="podcast-duration">Desired Discussion Duration (minutes):</label>
@@ -23,6 +27,7 @@
         </div>
         <small>(Duration is approximate and may vary slightly)</small>
 
+        <!-- Location Inputs -->
         <div class="location-section">
             <label for="country-input">Country:</label>
             <input type="text" id="country-input" placeholder="Enter country...">
@@ -34,7 +39,7 @@
             <input type="text" id="city-input" placeholder="Enter city...">
         </div>
 
-        <!-- Prosecuting or Defending switch -->
+        <!-- Defend/Prosecute Mode Switch -->
         <div class="mode-select">
             <label>Case Mode:</label>
             <label class="switch">
@@ -44,22 +49,39 @@
             <span id="mode-label">Defend</span>
         </div>
 
+        <!-- The script will dynamically add speaker configs with role, voice, and specialty -->
         <div id="speaker-settings">
             <div id="speakers-container">
-                <!-- Lawyer configurations will be dynamically added here -->
+                <!-- Speaker configurations will be dynamically generated here by script.js -->
             </div>
         </div>
 
+        <!-- Additional Controls for Audio Format and Stats -->
+        <div class="additional-controls">
+            <div class="audio-format-row">
+                <label for="audio-format">Audio Format:</label>
+                <select id="audio-format">
+                    <option value="wav">WAV</option>
+                    <option value="mp3">MP3 (Coming Soon)</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Generate Button -->
         <button id="generate-btn">Generate Discussion</button>
+
+        <!-- Progress and Results Sections -->
         <div id="progress"></div>
         <div id="conversation"></div>
         <div id="error-log"></div>
         <div id="stats-panel"></div>
 
+        <!-- Disclaimer -->
         <div class="disclaimer">
             <p>Note: AI-generated voices and legal strategies are fictional. Content may be explicit or morally questionable.</p>
         </div>
     </div>
+
     <script src="script.js"></script>
 </body>
 </html>
