@@ -144,7 +144,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const totalLinesNeeded = Math.ceil(totalWordsNeeded / averageWordsPerLine);
 
         const linesPerChunk = totalLinesNeeded; // single request
-        const fullConversationText = await streamConversation(text, speakers, "", linesPerChunk, countryText, stateText, cityText, true, true);
+        const fullConversationText = await generateConversation(text, speakers, "", linesPerChunk, countryText, stateText, cityText, true, true);
 
         progressDiv.textContent = 'Conversation generation complete. Now generating audio...';
 
@@ -163,9 +163,8 @@ document.addEventListener('DOMContentLoaded', () => {
         conversationDiv.appendChild(playButton);
     }
 
-    let partialText = '';
-    async function streamConversation(topicText, speakers, previousLines, linesPerChunk, countryText, stateText, cityText, isFirstChunk, isLastChunk) {
-        const response = await fetch('/api/generate-conversation-chunk', {
+    async function generateConversation(topicText, speakers, previousLines, linesPerChunk, countryText, stateText, cityText, isFirstChunk, isLastChunk) {
+        const response = await fetch('/api/generate-conversation', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ topicText, speakers, previousLines, linesPerChunk, countryText, stateText, cityText, isFirstChunk, isLastChunk })
@@ -173,77 +172,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (!response.ok) {
             const errorText = await response.text();
-            throw new Error(`Error generating conversation chunk: ${errorText}`);
+            throw new Error(`Error generating conversation: ${errorText}`);
         }
 
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder('utf-8');
-
-        let fullText = '';
-        partialText = ''; // reset buffering
-
-        while (true) {
-            const { value, done } = await reader.read();
-            if (done) break;
-
-            const chunk = decoder.decode(value, {stream:true});
-            const lines = chunk.split('\n');
-
-            for (let line of lines) {
-                line = line.trim();
-                if (!line.startsWith('data:')) continue;
-
-                const jsonStr = line.replace(/^data:\s*/, '');
-                if (jsonStr === '[DONE]') {
-                    // finalize the conversation
-                    finalizeConversation();
-                    return fullText;
-                }
-
-                try {
-                    const parsed = JSON.parse(jsonStr);
-                    const content = parsed.content;
-                    if (content) {
-                        fullText += content;
-                        bufferAndDisplayText(content);
-                    }
-                } catch (err) {
-                    console.error('Error parsing streaming line:', line, err);
-                }
-            }
-        }
-
-        // if we somehow ended without [DONE]
-        finalizeConversation();
-        return fullText;
-    }
-
-    function bufferAndDisplayText(content) {
-        partialText += content;
-        // Split on newline to find complete lines
-        const lines = partialText.split('\n');
-        partialText = lines.pop(); // keep last partial line
-
-        // Display all complete lines
-        lines.forEach(ln => {
-            if (ln.trim()) {
-                const lineDiv = document.createElement('div');
-                lineDiv.textContent = ln;
-                conversationDiv.appendChild(lineDiv);
-                conversationDiv.scrollTop = conversationDiv.scrollHeight;
-            }
-        });
-    }
-
-    function finalizeConversation() {
-        // if any leftover text
-        if (partialText.trim()) {
-            const lineDiv = document.createElement('div');
-            lineDiv.textContent = partialText.trim();
-            conversationDiv.appendChild(lineDiv);
-            conversationDiv.scrollTop = conversationDiv.scrollHeight;
-        }
-        partialText = '';
+        const data = await response.json();
+        return data.content;
     }
 
     function parseConversation(conversationText) {
@@ -369,12 +302,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         progressDiv.textContent = 'Playing discussion...';
 
-        const combinedBuffer = combineAudioBuffers(adjustedBuffers, audioContext);
-        const wavData = audioBufferToWav(combinedBuffer);
-        const audioBlob = new Blob([new DataView(wavData)], { type: 'audio/wav' });
-
-        createDownloadLink(audioBlob);
-
         const lastSource = sources[sources.length - 1];
         if (lastSource) {
             lastSource.onended = () => {
@@ -383,119 +310,6 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             alert('No audio sources to play.');
         }
-    }
-
-    function combineAudioBuffers(audioBuffers, audioContext) {
-        const numberOfChannels = audioBuffers[0].numberOfChannels;
-        let totalLength = 0;
-        audioBuffers.forEach(buffer => { totalLength += buffer.length; });
-
-        const combinedBuffer = audioContext.createBuffer(
-            numberOfChannels,
-            totalLength,
-            audioBuffers[0].sampleRate
-        );
-
-        let offset = 0;
-        for (let i = 0; i < audioBuffers.length; i++) {
-            const buffer = audioBuffers[i];
-            for (let channel = 0; channel < numberOfChannels; channel++) {
-                const combinedData = combinedBuffer.getChannelData(channel);
-                const bufferData = buffer.getChannelData(channel);
-                combinedData.set(bufferData, offset);
-            }
-            offset += buffer.length;
-        }
-
-        return combinedBuffer;
-    }
-
-    function audioBufferToWav(buffer, options = {}) {
-        const numChannels = buffer.numberOfChannels;
-        const sampleRate = buffer.sampleRate;
-        const format = options.float32 ? 3 : 1;
-        const bitDepth = format === 3 ? 32 : 16;
-
-        let result;
-        if (numChannels === 2) {
-            result = interleave(buffer.getChannelData(0), buffer.getChannelData(1));
-        } else {
-            result = buffer.getChannelData(0);
-        }
-
-        return encodeWAV(result, sampleRate, numChannels, format, bitDepth);
-    }
-
-    function interleave(inputL, inputR) {
-        const length = inputL.length + inputR.length;
-        const result = new Float32Array(length);
-        let index = 0, inputIndex = 0;
-        while (index < length) {
-            result[index++] = inputL[inputIndex];
-            result[index++] = inputR[inputIndex];
-            inputIndex++;
-        }
-        return result;
-    }
-
-    function encodeWAV(samples, sampleRate, numChannels, format, bitDepth) {
-        const buffer = new ArrayBuffer(44 + samples.length * (bitDepth / 8));
-        const view = new DataView(buffer);
-
-        writeString(view, 0, 'RIFF');
-        view.setUint32(4, 36 + samples.length * (bitDepth / 8), true);
-        writeString(view, 8, 'WAVE');
-        writeString(view, 12, 'fmt ');
-        view.setUint32(16, 16, true);
-        view.setUint16(20, format, true);
-        view.setUint16(22, numChannels, true);
-        view.setUint32(24, sampleRate, true);
-        view.setUint32(28, sampleRate * numChannels * (bitDepth / 8), true);
-        view.setUint16(32, numChannels * (bitDepth / 8), true);
-        view.setUint16(34, bitDepth, true);
-        writeString(view, 36, 'data');
-        view.setUint32(40, samples.length * (bitDepth / 8), true);
-
-        if (format === 1) {
-            floatTo16BitPCM(view, 44, samples);
-        } else {
-            writeFloat32(view, 44, samples);
-        }
-
-        return buffer;
-    }
-
-    function floatTo16BitPCM(output, offset, input) {
-        for (let i = 0; i < input.length; i++, offset += 2) {
-            let s = Math.max(-1, Math.min(1, input[i]));
-            output.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
-        }
-    }
-
-    function writeFloat32(output, offset, input) {
-        for (let i = 0; i < input.length; i++, offset += 4) {
-            output.setFloat32(offset, input[i], true);
-        }
-    }
-
-    function writeString(view, offset, string) {
-        for (let i = 0; i < string.length; i++) {
-            view.setUint8(offset + i, string.charCodeAt(i));
-        }
-    }
-
-    function createDownloadLink(audioBlob) {
-        const url = URL.createObjectURL(audioBlob);
-        const downloadLink = document.createElement('a');
-        downloadLink.href = url;
-        downloadLink.download = 'discussion.wav';
-        downloadLink.textContent = 'Download Discussion';
-        downloadLink.style.display = 'block';
-        downloadLink.style.marginTop = '10px';
-        downloadLink.style.color = '#fff';
-        downloadLink.style.textDecoration = 'underline';
-
-        conversationDiv.appendChild(downloadLink);
     }
 
     function showLoading() {
