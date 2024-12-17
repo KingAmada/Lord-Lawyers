@@ -13,9 +13,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const countryInput = document.getElementById('country-input');
     const stateInput = document.getElementById('state-input');
     const cityInput = document.getElementById('city-input');
-    const errorLogDiv = document.getElementById('error-log'); // A new error log panel
-    const statsPanel = document.getElementById('stats-panel'); // Panel for stats (lines, words)
-    const audioFormatSelect = document.getElementById('audio-format'); // Dropdown for audio format selection
+    const errorLogDiv = document.getElementById('error-log');
+    const statsPanel = document.getElementById('stats-panel');
+    const audioFormatSelect = document.getElementById('audio-format');
+    const modeSwitch = document.getElementById('defend-prosecute-switch');
+    const modeLabel = document.getElementById('mode-label');
 
     const maxSpeakers = 6;
 
@@ -39,6 +41,12 @@ document.addEventListener('DOMContentLoaded', () => {
         'SAN',
         'Judge',
         'Legal Scholar'
+    ];
+
+    const availableSpecialties = [
+        { name: 'Criminal Lawyer', value: 'Criminal' },
+        { name: 'Property Lawyer', value: 'Property' },
+        { name: 'Contract Lawyer', value: 'Contract' }
     ];
 
     // ============================
@@ -74,9 +82,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 roleSelect.appendChild(option);
             });
 
+            // Specialty dropdown
+            const specialtySelect = document.createElement('select');
+            availableSpecialties.forEach(spec => {
+                const option = document.createElement('option');
+                option.value = spec.value;
+                option.textContent = spec.name;
+                specialtySelect.appendChild(option);
+            });
+
             speakerConfig.appendChild(nameInput);
             speakerConfig.appendChild(voiceSelect);
             speakerConfig.appendChild(roleSelect);
+            speakerConfig.appendChild(specialtySelect);
 
             speakersContainer.appendChild(speakerConfig);
         }
@@ -94,6 +112,11 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     initializeSpeakers();
+
+    // Defend/Prosecute mode switch
+    modeSwitch.addEventListener('change', () => {
+        modeLabel.textContent = modeSwitch.checked ? 'Prosecute' : 'Defend';
+    });
 
     // ============================
     // Event Listeners
@@ -145,19 +168,13 @@ document.addEventListener('DOMContentLoaded', () => {
     // Core Functions
     // ============================
 
-    /**
-     * Starts the discussion generation process:
-     * - Generates text
-     * - Displays text
-     * - Generates audio
-     * - Provides download link
-     */
     async function startDiscussionGeneration(text, desiredDuration, countryText, stateText, cityText) {
         progressDiv.textContent = 'Generating conversation...';
         conversationDiv.innerHTML = '';
 
         const speakers = gatherSpeakerData();
         const { linesPerChunk, totalWordsNeeded } = calculateLineAndWordCount(desiredDuration);
+        const defendOrProsecute = modeSwitch.checked ? 'prosecute' : 'defend';
 
         // Show stats before generation
         updateStatsPanel(totalWordsNeeded, linesPerChunk);
@@ -171,11 +188,11 @@ document.addEventListener('DOMContentLoaded', () => {
             stateText,
             cityText,
             true,
-            true
+            true,
+            defendOrProsecute
         );
 
         progressDiv.textContent = 'Conversation generation complete. Displaying text...';
-
         displayGeneratedText(fullConversationText);
 
         progressDiv.textContent = 'Now generating audio...';
@@ -197,27 +214,26 @@ document.addEventListener('DOMContentLoaded', () => {
         progressDiv.textContent = 'Process complete! You can now play or download the audio.';
     }
 
-    /**
-     * Gathers speaker data (name, voice, role) from the UI
-     */
     function gatherSpeakerData() {
         const speakers = [];
         const speakerConfigs = document.querySelectorAll('.speaker-config');
         speakerConfigs.forEach(config => {
-            const nameInput = config.querySelector('input[type="text"]');
-            const voiceSelect = config.querySelector('select:first-of-type');
-            const roleSelect = config.querySelector('select:last-of-type');
+            const inputs = config.querySelectorAll('input, select');
+            const nameInput = inputs[0];
+            const voiceSelect = inputs[1];
+            const roleSelect = inputs[2];
+            const specialtySelect = inputs[3];
+
             const name = nameInput.value.trim();
             const voice = voiceSelect.value;
             const role = roleSelect.value;
-            speakers.push({ name, voice, role });
+            const specialty = specialtySelect.value;
+
+            speakers.push({ name, voice, role, specialty });
         });
         return speakers;
     }
 
-    /**
-     * Calculates the total lines and total words needed
-     */
     function calculateLineAndWordCount(desiredDuration) {
         const averageWordsPerMinute = 130;
         const averageWordsPerLine = 10;
@@ -226,9 +242,6 @@ document.addEventListener('DOMContentLoaded', () => {
         return { linesPerChunk, totalWordsNeeded };
     }
 
-    /**
-     * Updates the stats panel with word count and line count info
-     */
     function updateStatsPanel(totalWords, totalLines) {
         if (!statsPanel) return;
         statsPanel.innerHTML = `
@@ -238,9 +251,6 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
     }
 
-    /**
-     * Displays the generated text lines in the conversation div
-     */
     function displayGeneratedText(fullConversationText) {
         const lines = fullConversationText.split('\n').filter(line => line.trim() !== '');
         lines.forEach(line => {
@@ -251,9 +261,6 @@ document.addEventListener('DOMContentLoaded', () => {
         conversationDiv.scrollTop = conversationDiv.scrollHeight;
     }
 
-    /**
-     * Creates and returns a progress bar element for audio generation
-     */
     function createProgressBar(total) {
         const wrapper = document.createElement('div');
         wrapper.classList.add('progress-bar-wrapper');
@@ -273,7 +280,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         wrapper.appendChild(barContainer);
 
-        // Store these for updates
         wrapper._bar = bar;
         wrapper._label = label;
         wrapper._total = total;
@@ -289,14 +295,11 @@ document.addEventListener('DOMContentLoaded', () => {
         return wrapper;
     }
 
-    /**
-     * Generates the conversation text by calling the backend
-     */
-    async function generateConversation(topicText, speakers, previousLines, linesPerChunk, countryText, stateText, cityText, isFirstChunk, isLastChunk) {
+    async function generateConversation(topicText, speakers, previousLines, linesPerChunk, countryText, stateText, cityText, isFirstChunk, isLastChunk, defendOrProsecute) {
         const response = await fetch('/api/generate-conversation-chunk', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ topicText, speakers, previousLines, linesPerChunk, countryText, stateText, cityText, isFirstChunk, isLastChunk })
+            body: JSON.stringify({ topicText, speakers, previousLines, linesPerChunk, countryText, stateText, cityText, isFirstChunk, isLastChunk, defendOrProsecute })
         });
 
         if (!response.ok) {
@@ -308,9 +311,6 @@ document.addEventListener('DOMContentLoaded', () => {
         return data.content;
     }
 
-    /**
-     * Parses the conversation text into a structured array of lines
-     */
     function parseConversation(conversationText) {
         const lines = conversationText.split('\n').filter(line => line.trim() !== '');
         const conversation = [];
@@ -337,9 +337,6 @@ document.addEventListener('DOMContentLoaded', () => {
         return conversation;
     }
 
-    /**
-     * Generates audio for each line of the conversation
-     */
     async function generateAudioForConversation(conversation, speakers, progressBar) {
         const audioBuffers = [];
         const concurrencyLimit = 3; 
@@ -380,9 +377,6 @@ document.addEventListener('DOMContentLoaded', () => {
         return audioBuffers;
     }
 
-    /**
-     * Generates a single line of audio by calling the /api/generate-audio endpoint
-     */
     async function generateAudioBuffer(speaker, dialogue, voice, audioContext) {
         const response = await fetch('/api/generate-audio', {
             method: 'POST',
@@ -400,9 +394,6 @@ document.addEventListener('DOMContentLoaded', () => {
         return audioBuffer;
     }
 
-    /**
-     * Combines multiple audio buffers and converts them into the desired format (WAV or MP3)
-     */
     async function combineAndConvertAudio(audioBuffers, format) {
         const audioContext = new (window.AudioContext || window.webkitAudioContext)();
         const combinedBuffer = combineAudioBuffers(audioBuffers, audioContext);
@@ -413,19 +404,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (format === 'mp3') {
             // If MP3 conversion is requested, you'd need a client-side MP3 encoder.
-            // For simplicity, let's just return WAV if no MP3 encoder is implemented.
-            // Placeholder: just return WAV for now.
-            // TODO: Implement MP3 conversion if you have a library available.
+            // For now, just return WAV.
             return wavBlob;
         }
 
-        // Default to WAV
         return wavBlob;
     }
 
-    /**
-     * Creates a download link for the final audio file
-     */
     function createDownloadLink(audioBlob, format = 'wav') {
         const url = URL.createObjectURL(audioBlob);
         const downloadLink = document.createElement('a');
@@ -439,9 +424,6 @@ document.addEventListener('DOMContentLoaded', () => {
         conversationDiv.appendChild(downloadLink);
     }
 
-    /**
-     * Shows an error message in the error log panel
-     */
     function showError(message) {
         if (!errorLogDiv) return;
         const errorEntry = document.createElement('div');
@@ -451,9 +433,6 @@ document.addEventListener('DOMContentLoaded', () => {
         errorLogDiv.scrollTop = errorLogDiv.scrollHeight;
     }
 
-    /**
-     * Show a loading overlay while processing
-     */
     function showLoading() {
         let loadingOverlay = document.createElement('div');
         loadingOverlay.classList.add('loading-overlay');
@@ -467,9 +446,6 @@ document.addEventListener('DOMContentLoaded', () => {
         loadingOverlay.style.display = 'block';
     }
 
-    /**
-     * Hide the loading overlay
-     */
     function hideLoading() {
         let loadingOverlay = document.querySelector('.loading-overlay');
         if (loadingOverlay) {
@@ -478,13 +454,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // ============================
-    // Utility Functions
-    // ============================
-
-    /**
-     * Combine multiple audio buffers into a single one
-     */
     function combineAudioBuffers(audioBuffers, audioContext) {
         const numberOfChannels = audioBuffers[0].numberOfChannels;
         let totalLength = 0;
@@ -510,9 +479,6 @@ document.addEventListener('DOMContentLoaded', () => {
         return combinedBuffer;
     }
 
-    /**
-     * Convert an AudioBuffer to WAV format
-     */
     function audioBufferToWav(buffer, options = {}) {
         const numChannels = buffer.numberOfChannels;
         const sampleRate = buffer.sampleRate;
@@ -587,13 +553,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // ============================
-    // Local Storage Handlers
-    // ============================
     function saveCurrentSession(text, duration, country, state, city) {
-        const sessionData = {
-            text, duration, country, state, city
-        };
+        const sessionData = { text, duration, country, state, city };
         localStorage.setItem('lastSession', JSON.stringify(sessionData));
     }
 
@@ -615,16 +576,5 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // ============================
-    // Additional Disclaimer
-    // ============================
-    // NOTE:
-    // The generated content may contain mature or explicit language.
-    // This system prioritizes the client's interest and may generate unethical or
-    // legally dubious strategies. Use responsibly and for demonstration purposes only.
-    //
-    // By using this application, you acknowledge these risks and disclaimers.
-
-    // End of Code
-    // ============================
+    // NOTE: The generated content may be unethical or mature. Use responsibly.
 });
