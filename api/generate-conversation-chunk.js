@@ -110,7 +110,7 @@ ${speakersInstructions}
 
 Persona & Style Requirements:
 - Produce a thorough, detailed conversation with depth and complexity.
-- The output should be at least ${linesPerChunk * 20} words, and may extend well beyond that if needed. There is no strict upper limit, but remain coherent and on-topic.
+- The output should be at least 1500 words, and may extend well beyond that if needed. There is no strict upper limit, but remain coherent and on-topic.
 - The conversation should be rich in legal reasoning, references to laws, statutes, and precedents relevant to each participant’s specialty.
 - Differentiate participants by their role, experience level, and specialty.
 - If defending: the final stance should present the client as not guilty, explaining evidence and logic that dismantle the prosecution’s claims.
