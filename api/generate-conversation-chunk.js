@@ -145,10 +145,10 @@ Begin the conversation now, allow it to evolve, and end with the final courtroom
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-                model: 'gpt-4',
+                model: 'gpt-4o',
                 messages: messages,
                 max_tokens: 6000,
-                temperature: 0.4,
+                temperature: 0.8,
             }),
         });
 
