@@ -1,6 +1,5 @@
-// public/script.js
-
 document.addEventListener('DOMContentLoaded', () => {
+
     // ============================
     // Element References
     // ============================
@@ -20,8 +19,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const modeLabel = document.getElementById('mode-label');
 
     const maxSpeakers = 6;
+    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
 
-    // ============================
+   // ============================
     // Data and Configuration
     // ============================
     const availableVoices = [
@@ -109,35 +109,16 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Load previous session from localStorage if available
-    loadPreviousSession();
-    initializeSpeakers();
+     async function startDiscussionGeneration() {
+          const text = textInput.value.trim();
+           const durationInput = document.getElementById('podcast-duration');
+          const desiredDuration = parseInt(durationInput.value);
+           const countryText = countryInput.value.trim();
+           const stateText = stateInput.value.trim();
+           const cityText = cityInput.value.trim();
+           const defendOrProsecute = modeSwitch.checked ? 'prosecute' : 'defend';
 
-    numSpeakersInput.addEventListener('change', () => {
-        let numSpeakers = parseInt(numSpeakersInput.value);
-        if (numSpeakers < 2) numSpeakers = 2;
-        if (numSpeakers > maxSpeakers) numSpeakers = maxSpeakers;
-        numSpeakersInput.value = numSpeakers;
-        initializeSpeakers();
-    });
-
-    // Defend/Prosecute mode switch
-    modeSwitch.addEventListener('change', () => {
-        modeLabel.textContent = modeSwitch.checked ? 'Prosecute' : 'Defend';
-    });
-
-    // ============================
-    // Event Listeners
-    // ============================
-    generateBtn.addEventListener('click', async () => {
-        const text = textInput.value.trim();
-        const durationInput = document.getElementById('podcast-duration');
-        const desiredDuration = parseInt(durationInput.value);
-        const countryText = countryInput.value.trim();
-        const stateText = stateInput.value.trim();
-        const cityText = cityInput.value.trim();
-
-        // Validate Inputs
+         // Validate Inputs
         if (!text) {
             showError('Please enter details about the case.');
             return;
@@ -158,84 +139,73 @@ document.addEventListener('DOMContentLoaded', () => {
 
         generateBtn.textContent = 'Generating...';
         generateBtn.disabled = true;
-        showLoading();
+         showLoading();
 
         try {
-            await startDiscussionGeneration(text, desiredDuration, countryText, stateText, cityText);
-        } catch (error) {
-            console.error(error);
-            showError('An error occurred while generating the discussion.');
-        } finally {
-            generateBtn.textContent = 'Generate Discussion';
-            generateBtn.disabled = false;
-            hideLoading();
-        }
-    });
+           progressDiv.textContent = 'Generating conversation...';
+           conversationDiv.innerHTML = '';
 
-    // ============================
-    // Core Functions
-    // ============================
+           const speakers = gatherSpeakerData();
+            const { linesPerChunk, totalWordsNeeded } = calculateLineAndWordCount(desiredDuration);
 
-    async function startDiscussionGeneration(text, desiredDuration, countryText, stateText, cityText) {
-        progressDiv.textContent = 'Generating conversation...';
-        conversationDiv.innerHTML = '';
+           // Show stats
+            updateStatsPanel(totalWordsNeeded, linesPerChunk);
 
-        const speakers = gatherSpeakerData();
-        const { linesPerChunk, totalWordsNeeded } = calculateLineAndWordCount(desiredDuration);
-        const defendOrProsecute = modeSwitch.checked ? 'prosecute' : 'defend';
+           const fullConversationText = await generateConversation(
+               text,
+               speakers,
+               "",
+              linesPerChunk,
+               countryText,
+               stateText,
+               cityText,
+                true,
+                true,
+              defendOrProsecute
+           );
 
-        // Show stats
-        updateStatsPanel(totalWordsNeeded, linesPerChunk);
+            progressDiv.textContent = 'Conversation generation complete. Displaying text...';
+           displayGeneratedText(fullConversationText);
+           progressDiv.textContent = 'Now generating audio...';
 
-        const fullConversationText = await generateConversation(
-            text,
-            speakers,
-            "",
-            linesPerChunk,
-            countryText,
-            stateText,
-            cityText,
-            true,
-            true,
-            defendOrProsecute
-        );
+            const conversation = parseConversation(fullConversationText);
+           let progressBar = createProgressBar(conversation.length);
+            progressDiv.appendChild(progressBar);
 
-        progressDiv.textContent = 'Conversation generation complete. Displaying text...';
-        displayGeneratedText(fullConversationText);
+          const audioBuffers = await generateAudioForConversation(conversation, speakers, progressBar);
+          progressDiv.textContent = 'All audio generated. Preparing download...';
 
-        progressDiv.textContent = 'Now generating audio...';
+          const format = audioFormatSelect.value || 'wav';
+         const audioBlob = await combineAndConvertAudio(audioBuffers, format);
+           createDownloadLink(audioBlob, format);
+          progressDiv.textContent = 'Process complete! You can now play or download the audio.';
 
-        const conversation = parseConversation(fullConversationText);
-        let progressBar = createProgressBar(conversation.length);
-        progressDiv.appendChild(progressBar);
+      } catch (error) {
+          console.error(error);
+          showError('An error occurred while generating the discussion.');
+      } finally {
+           generateBtn.textContent = 'Generate Discussion';
+           generateBtn.disabled = false;
+          hideLoading();
+     }
+ }
 
-        const audioBuffers = await generateAudioForConversation(conversation, speakers, progressBar);
-
-        progressDiv.textContent = 'All audio generated. Preparing download...';
-
-        const format = audioFormatSelect.value || 'wav';
-        const audioBlob = await combineAndConvertAudio(audioBuffers, format);
-
-        createDownloadLink(audioBlob, format);
-        progressDiv.textContent = 'Process complete! You can now play or download the audio.';
-    }
-
-    function gatherSpeakerData() {
+     function gatherSpeakerData() {
         const speakers = [];
         const speakerConfigs = document.querySelectorAll('.speaker-config');
-        speakerConfigs.forEach(config => {
+         speakerConfigs.forEach(config => {
             const inputs = config.querySelectorAll('input, select');
             const nameInput = inputs[0];
             const voiceSelect = inputs[1];
             const roleSelect = inputs[2];
-            const specialtySelect = inputs[3];
+             const specialtySelect = inputs[3];
 
             const name = nameInput.value.trim();
             const voice = voiceSelect.value;
             const role = roleSelect.value;
             const specialty = specialtySelect.value;
 
-            speakers.push({ name, voice, role, specialty });
+             speakers.push({ name, voice, role, specialty });
         });
         return speakers;
     }
@@ -248,23 +218,30 @@ document.addEventListener('DOMContentLoaded', () => {
         return { linesPerChunk, totalWordsNeeded };
     }
 
-    function updateStatsPanel(totalWords, totalLines) {
-        if (!statsPanel) return;
+     function updateStatsPanel(totalWords, totalLines) {
+         if (!statsPanel) return;
         statsPanel.innerHTML = `
-            <p><strong>Estimated Words:</strong> ${totalWords}</p>
-            <p><strong>Estimated Lines:</strong> ${totalLines}</p>
-            <p><strong>Note:</strong> Actual output may vary.</p>
-        `;
-    }
+             <p><strong>Estimated Words:</strong> ${totalWords}</p>
+              <p><strong>Estimated Lines:</strong> ${totalLines}</p>
+             <p><strong>Note:</strong> Actual output may vary.</p>
+         `;
+     }
 
-    function displayGeneratedText(fullConversationText) {
+   function displayGeneratedText(fullConversationText) {
         const lines = fullConversationText.split('\n').filter(line => line.trim() !== '');
         lines.forEach(line => {
-            const lineDiv = document.createElement('div');
-            lineDiv.textContent = line;
-            conversationDiv.appendChild(lineDiv);
-        });
-        conversationDiv.scrollTop = conversationDiv.scrollHeight;
+           const lineDiv = document.createElement('div');
+           const match = line.match(/^([\w\s]+)\([^)]*\):\s*(.+)$/);
+            if (match) {
+                 const speaker = match[1].trim();
+                const dialogue = match[2].trim();
+               lineDiv.innerHTML = `<p>${speaker}: ${dialogue} <button class="play-audio-button" data-dialogue="${dialogue}" data-speaker="${speaker}">Play</button></p>`;
+           } else {
+                lineDiv.textContent = line;
+          }
+          conversationDiv.appendChild(lineDiv);
+      });
+       conversationDiv.scrollTop = conversationDiv.scrollHeight;
     }
 
     function createProgressBar(total) {
@@ -273,28 +250,27 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const label = document.createElement('div');
         label.textContent = `Audio generation progress: 0/${total}`;
-        label.classList.add('progress-bar-label');
-        wrapper.appendChild(label);
+         label.classList.add('progress-bar-label');
+         wrapper.appendChild(label);
 
         const barContainer = document.createElement('div');
         barContainer.classList.add('progress-bar-container');
 
-        const bar = document.createElement('div');
+       const bar = document.createElement('div');
         bar.classList.add('progress-bar');
-        bar.style.width = '0%';
-        barContainer.appendChild(bar);
+       bar.style.width = '0%';
+       barContainer.appendChild(bar);
+         wrapper.appendChild(barContainer);
 
-        wrapper.appendChild(barContainer);
-
-        wrapper._bar = bar;
-        wrapper._label = label;
+         wrapper._bar = bar;
+         wrapper._label = label;
         wrapper._total = total;
         wrapper._current = 0;
 
         wrapper.update = function() {
-            this._current++;
-            const percent = Math.floor((this._current / this._total) * 100);
-            this._bar.style.width = percent + '%';
+           this._current++;
+          const percent = Math.floor((this._current / this._total) * 100);
+          this._bar.style.width = percent + '%';
             this._label.textContent = `Audio generation progress: ${this._current}/${this._total}`;
         };
 
@@ -302,10 +278,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function generateConversation(topicText, speakers, previousLines, linesPerChunk, countryText, stateText, cityText, isFirstChunk, isLastChunk, defendOrProsecute) {
-        const response = await fetch('/api/generate-conversation-chunk', {
+         const response = await fetch('/api/generate-conversation-chunk', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ topicText, speakers, previousLines, linesPerChunk, countryText, stateText, cityText, isFirstChunk, isLastChunk, defendOrProsecute })
+           headers: { 'Content-Type': 'application/json' },
+           body: JSON.stringify({ topicText, speakers, previousLines, linesPerChunk, countryText, stateText, cityText, isFirstChunk, isLastChunk, defendOrProsecute })
         });
 
         if (!response.ok) {
@@ -317,13 +293,14 @@ document.addEventListener('DOMContentLoaded', () => {
         return data.content;
     }
 
-    function parseConversation(conversationText) {
-        const lines = conversationText.split('\n').filter(line => line.trim() !== '');
-        const conversation = [];
 
-        lines.forEach((line, index) => {
-            const match = line.match(/^([\w\s]+)\([^)]*\):\s*(.+)$/);
-            if (match) {
+   function parseConversation(conversationText) {
+        const lines = conversationText.split('\n').filter(line => line.trim() !== '');
+         const conversation = [];
+
+       lines.forEach((line, index) => {
+          const match = line.match(/^([\w\s]+)\([^)]*\):\s*(.+)$/);
+          if (match) {
                 let speaker = match[1].trim();
                 let dialogue = match[2].trim();
                 const isInterruption = dialogue.endsWith('--');
@@ -332,180 +309,177 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 conversation.push({
                     speaker,
-                    dialogue,
-                    isInterruption,
+                   dialogue,
+                   isInterruption,
                     isContinuation,
-                    index
+                   index
                 });
             }
         });
+       return conversation;
+   }
 
-        return conversation;
-    }
-
-    async function generateAudioForConversation(conversation, speakers, progressBar) {
+   async function generateAudioForConversation(conversation, speakers, progressBar) {
         const audioBuffers = [];
-        const concurrencyLimit = 3; 
+         const concurrencyLimit = 3;
         let index = 0;
         let errorsEncountered = false;
 
         async function worker() {
-            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-            while (index < conversation.length) {
-                const i = index++;
-                const line = conversation[i];
-                try {
-                    const speakerVoice = speakers.find(s => s.name === line.speaker)?.voice || 'echo';
-                    const audioBuffer = await generateAudioBuffer(line.speaker, line.dialogue, speakerVoice, audioContext);
-                    audioBuffers[i] = audioBuffer;
-                    if (progressBar && typeof progressBar.update === 'function') {
-                        progressBar.update();
-                    }
-                } catch (error) {
-                    console.error(`Error generating audio for line ${i + 1}:`, error);
+           while (index < conversation.length) {
+              const i = index++;
+             const line = conversation[i];
+             try {
+               const speakerVoice = speakers.find(s => s.name === line.speaker)?.voice || 'echo';
+                 const audioBuffer = await generateAudioBuffer(line.speaker, line.dialogue, speakerVoice);
+                  audioBuffers[i] = audioBuffer;
+                  if (progressBar && typeof progressBar.update === 'function') {
+                    progressBar.update();
+                }
+             } catch (error) {
+                   console.error(`Error generating audio for line ${i + 1}:`, error);
                     showError(`Error generating audio for line ${i + 1}. Check console for details.`);
                     errorsEncountered = true;
-                }
             }
-        }
+          }
+       }
+       const workers = [];
+       for (let i = 0; i < concurrencyLimit; i++) {
+           workers.push(worker());
+       }
+       await Promise.all(workers);
+       if (errorsEncountered) {
+         showError('Some audio lines failed to generate. The final audio may be incomplete.');
+       }
+       return audioBuffers;
+   }
 
-        const workers = [];
-        for (let i = 0; i < concurrencyLimit; i++) {
-            workers.push(worker());
-        }
-
-        await Promise.all(workers);
-
-        if (errorsEncountered) {
-            showError('Some audio lines failed to generate. The final audio may be incomplete.');
-        }
-
-        return audioBuffers;
-    }
-
-    async function generateAudioBuffer(speaker, dialogue, voice, audioContext) {
-        const response = await fetch('/api/generate-audio', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+     async function generateAudioBuffer(speaker, dialogue, voice) {
+       try {
+           const response = await fetch('/api/generate-audio', {
+              method: 'POST',
+             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ speaker, dialogue, voice })
-        });
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(`Error generating audio: ${errorText}`);
-        }
-
-        const arrayBuffer = await response.arrayBuffer();
-        const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-        return audioBuffer;
+           });
+            if (!response.ok) {
+                 const errorText = await response.text();
+                 throw new Error(`Error generating audio: ${errorText}`);
+             }
+             const arrayBuffer = await response.arrayBuffer();
+             const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+          return audioBuffer;
+       } catch (error) {
+          console.error('Error in generateAudioBuffer:', error);
+           throw error;
+      }
     }
 
     async function combineAndConvertAudio(audioBuffers, format) {
-        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        const combinedBuffer = combineAudioBuffers(audioBuffers, audioContext);
+         const combinedBuffer = combineAudioBuffers(audioBuffers, audioContext);
 
-        // Convert to WAV first
-        const wavData = audioBufferToWav(combinedBuffer);
+         // Convert to WAV first
+         const wavData = audioBufferToWav(combinedBuffer);
         const wavBlob = new Blob([new DataView(wavData)], { type: 'audio/wav' });
 
-        if (format === 'mp3') {
-            // If MP3 conversion is requested, you'd need a client-side MP3 encoder.
-            // For now, just return WAV.
-            return wavBlob;
-        }
+       if (format === 'mp3') {
+           // If MP3 conversion is requested, you'd need a client-side MP3 encoder.
+           // For now, just return WAV.
+           return wavBlob;
+       }
 
-        return wavBlob;
-    }
+       return wavBlob;
+   }
 
     function createDownloadLink(audioBlob, format = 'wav') {
         const url = URL.createObjectURL(audioBlob);
-        const downloadLink = document.createElement('a');
+         const downloadLink = document.createElement('a');
         downloadLink.href = url;
-        downloadLink.download = `discussion.${format}`;
+       downloadLink.download = `discussion.${format}`;
         downloadLink.textContent = 'Download Discussion';
-        downloadLink.style.display = 'block';
-        downloadLink.style.marginTop = '10px';
-        downloadLink.style.color = '#fff';
+         downloadLink.style.display = 'block';
+       downloadLink.style.marginTop = '10px';
+         downloadLink.style.color = '#fff';
         downloadLink.style.textDecoration = 'underline';
-        conversationDiv.appendChild(downloadLink);
-    }
+         conversationDiv.appendChild(downloadLink);
+   }
 
-    function showError(message) {
+  function showError(message) {
         if (!errorLogDiv) return;
-        const errorEntry = document.createElement('div');
+      const errorEntry = document.createElement('div');
         errorEntry.classList.add('error-entry');
         errorEntry.textContent = message;
-        errorLogDiv.appendChild(errorEntry);
-        errorLogDiv.scrollTop = errorLogDiv.scrollHeight;
+      errorLogDiv.appendChild(errorEntry);
+     errorLogDiv.scrollTop = errorLogDiv.scrollHeight;
     }
 
-    function showLoading() {
-        let loadingOverlay = document.createElement('div');
+   function showLoading() {
+       let loadingOverlay = document.createElement('div');
         loadingOverlay.classList.add('loading-overlay');
 
         let spinner = document.createElement('div');
         spinner.classList.add('loading-spinner');
-        spinner.innerHTML = '<div></div>';
+       spinner.innerHTML = '<div></div>';
 
-        loadingOverlay.appendChild(spinner);
+       loadingOverlay.appendChild(spinner);
         document.body.appendChild(loadingOverlay);
-        loadingOverlay.style.display = 'block';
+      loadingOverlay.style.display = 'block';
     }
 
-    function hideLoading() {
+   function hideLoading() {
         let loadingOverlay = document.querySelector('.loading-overlay');
         if (loadingOverlay) {
-            loadingOverlay.style.display = 'none';
-            loadingOverlay.remove();
-        }
-    }
+           loadingOverlay.style.display = 'none';
+           loadingOverlay.remove();
+       }
+   }
 
-    function combineAudioBuffers(audioBuffers, audioContext) {
+
+  function combineAudioBuffers(audioBuffers, audioContext) {
         const numberOfChannels = audioBuffers[0].numberOfChannels;
         let totalLength = 0;
         audioBuffers.forEach(buffer => { totalLength += buffer.length; });
 
-        const combinedBuffer = audioContext.createBuffer(
-            numberOfChannels,
+      const combinedBuffer = audioContext.createBuffer(
+           numberOfChannels,
             totalLength,
-            audioBuffers[0].sampleRate
+          audioBuffers[0].sampleRate
         );
 
-        let offset = 0;
+       let offset = 0;
         for (let i = 0; i < audioBuffers.length; i++) {
             const buffer = audioBuffers[i];
             for (let channel = 0; channel < numberOfChannels; channel++) {
                 const combinedData = combinedBuffer.getChannelData(channel);
                 const bufferData = buffer.getChannelData(channel);
                 combinedData.set(bufferData, offset);
-            }
-            offset += buffer.length;
-        }
+          }
+         offset += buffer.length;
+       }
 
         return combinedBuffer;
     }
 
-    function audioBufferToWav(buffer, options = {}) {
+   function audioBufferToWav(buffer, options = {}) {
         const numChannels = buffer.numberOfChannels;
-        const sampleRate = buffer.sampleRate;
-        const format = options.float32 ? 3 : 1;
-        const bitDepth = format === 3 ? 32 : 16;
+       const sampleRate = buffer.sampleRate;
+       const format = options.float32 ? 3 : 1;
+       const bitDepth = format === 3 ? 32 : 16;
 
-        let result;
+         let result;
         if (numChannels === 2) {
-            result = interleave(buffer.getChannelData(0), buffer.getChannelData(1));
+             result = interleave(buffer.getChannelData(0), buffer.getChannelData(1));
         } else {
-            result = buffer.getChannelData(0);
-        }
+             result = buffer.getChannelData(0);
+      }
 
         return encodeWAV(result, sampleRate, numChannels, format, bitDepth);
-    }
+   }
 
-    function interleave(inputL, inputR) {
+   function interleave(inputL, inputR) {
         const length = inputL.length + inputR.length;
         const result = new Float32Array(length);
-        let index = 0, inputIndex = 0;
-        while (index < length) {
+         let index = 0, inputIndex = 0;
+       while (index < length) {
             result[index++] = inputL[inputIndex];
             result[index++] = inputR[inputIndex];
             inputIndex++;
@@ -514,73 +488,123 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function encodeWAV(samples, sampleRate, numChannels, format, bitDepth) {
-        const buffer = new ArrayBuffer(44 + samples.length * (bitDepth / 8));
-        const view = new DataView(buffer);
-
-        writeString(view, 0, 'RIFF');
+         const buffer = new ArrayBuffer(44 + samples.length * (bitDepth / 8));
+      const view = new DataView(buffer);
+       writeString(view, 0, 'RIFF');
         view.setUint32(4, 36 + samples.length * (bitDepth / 8), true);
-        writeString(view, 8, 'WAVE');
+       writeString(view, 8, 'WAVE');
         writeString(view, 12, 'fmt ');
         view.setUint32(16, 16, true);
         view.setUint16(20, format, true);
-        view.setUint16(22, numChannels, true);
-        view.setUint32(24, sampleRate, true);
+      view.setUint16(22, numChannels, true);
+       view.setUint32(24, sampleRate, true);
         view.setUint32(28, sampleRate * numChannels * (bitDepth / 8), true);
-        view.setUint16(32, numChannels * (bitDepth / 8), true);
+         view.setUint16(32, numChannels * (bitDepth / 8), true);
         view.setUint16(34, bitDepth, true);
-        writeString(view, 36, 'data');
-        view.setUint32(40, samples.length * (bitDepth / 8), true);
+       writeString(view, 36, 'data');
+       view.setUint32(40, samples.length * (bitDepth / 8), true);
 
-        if (format === 1) {
+         if (format === 1) {
             floatTo16BitPCM(view, 44, samples);
-        } else {
-            writeFloat32(view, 44, samples);
+         } else {
+             writeFloat32(view, 44, samples);
         }
 
-        return buffer;
+         return buffer;
     }
 
-    function floatTo16BitPCM(output, offset, input) {
-        for (let i = 0; i < input.length; i++, offset += 2) {
+
+   function floatTo16BitPCM(output, offset, input) {
+      for (let i = 0; i < input.length; i++, offset += 2) {
             let s = Math.max(-1, Math.min(1, input[i]));
             output.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
         }
-    }
+   }
 
-    function writeFloat32(output, offset, input) {
-        for (let i = 0; i < input.length; i++, offset += 4) {
-            output.setFloat32(offset, input[i], true);
-        }
-    }
 
-    function writeString(view, offset, string) {
-        for (let i = 0; i < string.length; i++) {
+   function writeFloat32(output, offset, input) {
+       for (let i = 0; i < input.length; i++, offset += 4) {
+          output.setFloat32(offset, input[i], true);
+      }
+   }
+
+
+   function writeString(view, offset, string) {
+       for (let i = 0; i < string.length; i++) {
             view.setUint8(offset + i, string.charCodeAt(i));
         }
     }
 
     function saveCurrentSession(text, duration, country, state, city) {
-        const sessionData = { text, duration, country, state, city };
-        localStorage.setItem('lastSession', JSON.stringify(sessionData));
-    }
+       const sessionData = { text, duration, country, state, city };
+       localStorage.setItem('lastSession', JSON.stringify(sessionData));
+  }
 
     function loadPreviousSession() {
-        const saved = localStorage.getItem('lastSession');
-        if (!saved) return;
-        try {
+       const saved = localStorage.getItem('lastSession');
+       if (!saved) return;
+       try {
             const sessionData = JSON.parse(saved);
             if (sessionData.text) textInput.value = sessionData.text;
-            if (sessionData.duration) {
-                const durationInput = document.getElementById('podcast-duration');
-                durationInput.value = sessionData.duration;
-            }
-            if (sessionData.country) countryInput.value = sessionData.country;
+           if (sessionData.duration) {
+                 const durationInput = document.getElementById('podcast-duration');
+                 durationInput.value = sessionData.duration;
+           }
+             if (sessionData.country) countryInput.value = sessionData.country;
             if (sessionData.state) stateInput.value = sessionData.state;
-            if (sessionData.city) cityInput.value = sessionData.city;
-        } catch (e) {
-            // Ignore parsing errors
+           if (sessionData.city) cityInput.value = sessionData.city;
+       } catch (e) {
+         // Ignore parsing errors
         }
     }
+
+    // Load previous session from localStorage if available
+   loadPreviousSession();
+     initializeSpeakers();
+
+    numSpeakersInput.addEventListener('change', () => {
+        let numSpeakers = parseInt(numSpeakersInput.value);
+        if (numSpeakers < 2) numSpeakers = 2;
+        if (numSpeakers > maxSpeakers) numSpeakers = maxSpeakers;
+        numSpeakersInput.value = numSpeakers;
+       initializeSpeakers();
+   });
+
+    // Defend/Prosecute mode switch
+   modeSwitch.addEventListener('change', () => {
+      modeLabel.textContent = modeSwitch.checked ? 'Prosecute' : 'Defend';
+   });
+
+
+   generateBtn.addEventListener('click', async () => {
+       await startDiscussionGeneration();
+   });
+
+
+    conversationDiv.addEventListener('click', async (event) => {
+      if (event.target.classList.contains('play-audio-button')) {
+            const dialogue = event.target.dataset.dialogue;
+             const speaker = event.target.dataset.speaker;
+           const speakers = gatherSpeakerData();
+              const speakerVoice = speakers.find(s => s.name === speaker)?.voice || 'echo';
+
+           try {
+            const audioBuffer = await generateAudioBuffer(speaker, dialogue, speakerVoice);
+               playAudio(audioBuffer);
+          } catch (error) {
+               console.error('Error playing audio:', error);
+               showError('Error playing audio. Please check console for details.');
+          }
+       }
+    });
+
+  function playAudio(audioBuffer) {
+     if(!audioBuffer) return;
+      const source = audioContext.createBufferSource();
+     source.buffer = audioBuffer;
+       source.connect(audioContext.destination);
+       source.start(0);
+  }
 
     // NOTE: The generated content may be unethical or mature. Use responsibly.
 });
