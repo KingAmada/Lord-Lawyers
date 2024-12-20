@@ -1,14 +1,10 @@
-// index.js
-
 const express = require('express');
 const bodyParser = require('body-parser');
 const generateConversation = require('./api/generate-conversation-chunk');
 const generateAudio = require('./api/generate-audio');
-
+const path = require('path');
 const app = express();
 const port = process.env.PORT || 3000;
-
-const path = require('path');
 
 // Serve static files from the "public" folder
 app.use(express.static(path.join(__dirname, 'public')));
