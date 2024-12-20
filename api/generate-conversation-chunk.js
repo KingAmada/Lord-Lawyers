@@ -1,5 +1,3 @@
-// api/generate-conversation.js
-
 const fetch = require('node-fetch');
 
 module.exports = async (req, res) => {
@@ -8,15 +6,15 @@ module.exports = async (req, res) => {
         return;
     }
 
-    const { 
-        topicText, 
-        speakers, 
-        previousLines, 
-        linesPerChunk, 
-        countryText, 
-        stateText, 
-        cityText, 
-        isFirstChunk, 
+    const {
+        topicText,
+        speakers,
+        previousLines,
+        linesPerChunk,
+        countryText,
+        stateText,
+        cityText,
+        isFirstChunk,
         isLastChunk,
         defendOrProsecute // "defend" or "prosecute"
     } = req.body;
@@ -89,7 +87,7 @@ ${specialtyInstructionsBlock}
         }
 
         // Role and Specialty Emphasis
-        const modeFocus = defendOrProsecute === 'defend' 
+        const modeFocus = defendOrProsecute === 'defend'
             ? "They must protect the client from charges/liability, mitigate or dismiss claims."
             : "They must establish guilt or liability, strengthen the case against the client, and ensure penalties.";
 
@@ -134,38 +132,44 @@ SpeakerName (Role, Specialty): [Their dialogue]
 Begin the conversation now, allow it to evolve, and end with the final courtroom-style closing argument as described.
 `;
 
-
-
         const messages = [{ role: 'system', content: prompt }];
+       const maxRetries = 3;
+        let retryCount = 0;
 
-        const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${openaiApiKey}`,
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                model: 'gpt-4o',
-                messages: messages,
-                max_tokens: 6000,
-                temperature: 0.8,
-            }),
-        });
+      while (retryCount < maxRetries) {
+            try {
+               const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+                   method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${openaiApiKey}`,
+                       'Content-Type': 'application/json',
+                   },
+                  body: JSON.stringify({
+                       model: 'gpt-4o',
+                        messages: messages,
+                      max_tokens: 6000,
+                      temperature: 0.8,
+                   }),
+              });
+               if (!openaiResponse.ok) {
+                    const errorText = await openaiResponse.text();
+                    console.error('OpenAI API Error:', errorText);
+                   throw new Error(`Error: ${errorText}`);
+               }
+                const data = await openaiResponse.json();
+                const generatedText = data.choices[0].message.content.trim();
 
-        if (!openaiResponse.ok) {
-            const errorText = await openaiResponse.text();
-            console.error('OpenAI API Error:', errorText);
-            res.status(500).send(`Error: ${errorText}`);
-            return;
-        }
-
-        const data = await openaiResponse.json();
-        const generatedText = data.choices[0].message.content.trim();
-
-        res.status(200).json({ content: generatedText });
-
+               res.status(200).json({ content: generatedText });
+               return;
+          } catch (error) {
+               console.error(`Retry ${retryCount + 1} failed:`, error);
+               retryCount++;
+         }
+     }
+        console.error('All retries failed. Aborting request.');
+       res.status(500).send('Failed after multiple retries. Check the server logs.');
     } catch (error) {
         console.error('Server Error:', error);
-        res.status(500).send('Internal Server Error');
+       res.status(500).send('Internal Server Error');
     }
 };
